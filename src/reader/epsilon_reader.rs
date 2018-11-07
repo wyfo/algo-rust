@@ -34,9 +34,3 @@ impl TreeBuilder for EpsilonReader {
         unimplemented!()
     }
 }
-
-impl AsAny for EpsilonReader {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-}

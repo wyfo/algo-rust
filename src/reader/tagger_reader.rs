@@ -16,11 +16,11 @@ impl<Tk: Token + 'static> Reader<Tk> for TaggerReader<Tk> {
         Some(self.sym)
     }
 
-    fn epsilon(&self, _: &Rc<Reader<Tk>>) -> ReadingResult<Tk> {
+    fn epsilon(&self, _: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
         epsilon(&self.reader)
     }
 
-    fn read(&self, _: &Rc<Reader<Tk>>, _: Tk) -> ReadingResult<Tk> {
+    fn read(&self, _: &Rc<dyn Reader<Tk>>, _: Tk) -> ReadingResult<Tk> {
         unimplemented!()
     }
 }
@@ -43,8 +43,3 @@ impl<Tk: Token> TreeBuilder for TaggerReader<Tk> {
     }
 }
 
-impl<Tk: Token + 'static> AsAny for TaggerReader<Tk> {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-}

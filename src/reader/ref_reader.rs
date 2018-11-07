@@ -14,11 +14,11 @@ impl<Tk: Token + 'static> Reader<Tk> for RefReader<Tk> {
         self.val.as_ref().unwrap().tag()
     }
 
-    fn epsilon(&self, _: &Rc<Reader<Tk>>) -> ReadingResult<Tk> {
+    fn epsilon(&self, _: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
         epsilon(self.val.as_ref().unwrap())
     }
 
-    fn read(&self, _: &Rc<Reader<Tk>>, _: Tk) -> ReadingResult<Tk> {
+    fn read(&self, _: &Rc<dyn Reader<Tk>>, _: Tk) -> ReadingResult<Tk> {
         unimplemented!()
     }
 }
@@ -41,8 +41,3 @@ impl<Tk: Token> TreeBuilder for RefReader<Tk> {
     }
 }
 
-impl<Tk: Token + 'static> AsAny for RefReader<Tk> {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-}

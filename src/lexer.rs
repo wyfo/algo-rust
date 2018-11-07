@@ -1,16 +1,19 @@
 use list::List;
+use list::Stack;
+use parser::parse;
 use reader;
-use std::rc::Rc;
-use traces::Policy;
-use traces::Trace;
+use reader::epsilon;
+use reader::rc_memo_reader;
+use reader::read;
 use reader::Reader;
 use reader::switch_reader::SwitchReader;
-use symbols::Symbol;
 use std::fmt::Debug;
 use std::iter::empty;
-use std::collections::HashMap;
-use reader::epsilon;
-use reader::read;
+use std::rc::Rc;
+use symbols::Symbol;
+use traces::Policy;
+use traces::Trace;
+use trees::SwitchBuilder;
 
 #[derive(Clone, Debug)]
 pub struct Token {
@@ -28,35 +31,49 @@ impl<'a> reader::Token for &'a Token {
 }
 
 #[derive(Clone, Debug)]
-struct NoToken {
+pub struct NoToken {
     start: usize,
     stop: usize,
 }
 
-//fn tokenize(s: &String, rules: Vec<Rc<dyn Reader<u8>>>) -> impl Iterator<Item=Token<u8>> {
-//    let indexes: HashMap<_, _> = rules.iter().map(|r| r.tag()).enumerate().map(|t| (t.1, t.0)).collect();
-//    let lexer = SwitchReader::new(rules, Policy::Longest, None);
-//    let mut bytes = s.as_bytes();
-//    let index = 0;
-//    let read_one_token = || {
-//        let eps = epsilon(lexer);
-//        let mut reader = eps.ongoing;
-//        let mut traces = eps.success;
-//        let mut stop_index = index;
-//        let mut last_index: usize = 0;
-//        for (i, b) in bytes.iter().enumerate() {
-//            last_index = i;
-//            if reader.is_none() { break }
-//            let res = read(reader, b);
-//            if let Some(t) = res.success {
-//                traces = Some(t);
-//                stop_index += 1;
-//            }
-//            reader = res.ongoing
-//        }
-//    };
-//    while !bytes.is_empty() {
-//        let (token, remain) = read_one_token();
-//    }
-//}
+pub struct TokenIter<'a> {
+    bytes_consumed: usize,
+    remaining_bytes: &'a [u8],
+    lexer: Rc<dyn Reader<u8>>,
+}
 
+impl<'a> Iterator for TokenIter<'a> {
+    type Item = Result<Token, NoToken>;
+
+    fn next(&mut self) -> Option<Result<Token, NoToken>> {
+        if self.remaining_bytes.len() == 0 { return None; }
+        let parsing_res = parse(self.remaining_bytes, &self.lexer);
+        if let Some(success) = parsing_res.success {
+            let id = match success.peek() {
+                Trace::Switch(id, _) => *id,
+                _ => panic!()
+            };
+            let name = match self.lexer.as_tree_builder().switch_builder(id) {
+                SwitchBuilder::Case(_, Some(name)) => name,
+                _ => panic!()
+            };
+            let token = Token {
+                name,
+                traces: success,
+                start: self.bytes_consumed,
+                stop: self.bytes_consumed + parsing_res.success_len,
+                id,
+            };
+            self.bytes_consumed += parsing_res.success_len;
+            self.remaining_bytes = &self.remaining_bytes[parsing_res.success_len..];
+            Some(Ok(token))
+        } else {
+            Some(Err(NoToken { start: self.bytes_consumed, stop: self.bytes_consumed + parsing_res.nb_tokens_read }))
+        }
+    }
+}
+
+fn tokenize(s: &String, rules: Vec<Rc<dyn Reader<u8>>>) -> TokenIter {
+    let lexer = rc_memo_reader(SwitchReader::new(rules, Policy::Longest, None), 256);
+    TokenIter { bytes_consumed: 0, remaining_bytes: s.as_bytes(), lexer }
+}

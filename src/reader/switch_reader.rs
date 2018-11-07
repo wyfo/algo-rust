@@ -27,7 +27,7 @@ impl<Tk: Token + 'static> SwitchReader<Tk> {
         let ongoing: Option<Rc<dyn Reader<Tk>>> = if ongoings.is_empty() {
             None
         } else {
-            Some(Rc::new(SwitchReader::<Tk> { cases: ongoings, policy: self.policy, tag: self.tag }) as Rc<dyn Reader<Tk>>)
+            Some(rc_reader(SwitchReader::<Tk> { cases: ongoings, policy: self.policy, tag: self.tag }))
         };
         let success = results.iter().find(|(c, _)| c.success.is_some()).map(|(c, i)| (c.success.clone().unwrap(), i));
         ReadingResult {
@@ -62,11 +62,5 @@ impl<Tk: Token> TreeBuilder for SwitchReader<Tk> {
 
     fn node_builder(&self) -> NodeBuilder {
         unimplemented!()
-    }
-}
-
-impl<Tk: Token + 'static> AsAny for SwitchReader<Tk> {
-    fn as_any(&self) -> &dyn Any {
-        self
     }
 }

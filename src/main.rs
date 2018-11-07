@@ -59,7 +59,7 @@ fn main() {
     tree = trees::tree_from_trace(r.as_tree_builder(), &res.success.unwrap(), &vec!['b'][..]);
     println!("{:?}", &tree);
 //    let l = rc_reader(ListReader::new(vec![r.clone(), r.clone()], Symbol::new(1)));
-    let l = rc_reader(LoopReader::new(r.clone(), traces::Policy::Longest, loop_reader::LoopOrdering::Increasing, Symbol::new(1)));
+    let l = rc_memo_reader(LoopReader::new(r.clone(), traces::Policy::Longest, loop_reader::LoopOrdering::Increasing, Symbol::new(1)), 256);
     res = read(&l, 'a');
     res = read(&res.ongoing.unwrap(), 'a');
     println!("{:?}", &res);

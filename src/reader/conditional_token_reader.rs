@@ -42,8 +42,3 @@ impl<Tk: Token, M: Index<usize, Output=ReadingResult<Tk>> + Debug> TreeBuilder f
     }
 }
 
-impl<Tk: Token + 'static, M: Index<usize, Output=ReadingResult<Tk>> + Debug + 'static> AsAny for ConditionalTokenReader<Tk, M> {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-}

@@ -42,9 +42,3 @@ impl TreeBuilder for TokenReader {
         unimplemented!()
     }
 }
-
-impl AsAny for TokenReader {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-}

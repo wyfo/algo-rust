@@ -52,7 +52,7 @@ pub struct ReadingResult<Tk: Token> {
     pub ongoing: Option<Rc<dyn Reader<Tk>>>,
 }
 
-pub trait Reader<Tk: Token>: TreeBuilder + AsAny + Debug {
+pub trait Reader<Tk: Token>: TreeBuilder + Debug {
     fn tag(&self) -> Tag;
     fn epsilon(&self, this: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk>;
     fn read(&self, this: &Rc<dyn Reader<Tk>>, token: Tk) -> ReadingResult<Tk>;
@@ -66,32 +66,24 @@ pub fn read<Tk: Token>(this: &Rc<dyn Reader<Tk>>, token: Tk) -> ReadingResult<Tk
     this.read(this, token)
 }
 
-pub trait AsAny {
-    fn as_any(&self) -> &dyn Any;
-}
-
 #[derive(Debug)]
 pub struct Memoized<Tk: Token, R: Reader<Tk>> {
+    reader: R,
     eps: RefCell<Option<ReadingResult<Tk>>>,
     reads: Vec<RefCell<Option<ReadingResult<Tk>>>>,
-    reader: Rc<dyn Reader<Tk>>,
-    phantom: PhantomData<R>,
 }
 
 impl<Tk: Token, R: Reader<Tk> + 'static> Memoized<Tk, R> {
     fn new(reader: R, n: usize) -> Self {
         Memoized {
+            reader,
             eps: RefCell::new(None),
             reads: vec![RefCell::new(None); n],
-            reader: Rc::new(reader),
-            phantom: PhantomData,
         }
     }
-}
 
-impl<Tk: Token + 'static, R: Reader<Tk> + 'static> AsAny for Memoized<Tk, R> {
-    fn as_any(&self) -> &dyn Any {
-        self
+    fn as_memoized(reader: &R) -> &Self {
+        unsafe { &*(reader as *const R as *const Self) }
     }
 }
 
@@ -117,30 +109,24 @@ impl<Tk: Token + 'static, R: Reader<Tk> + 'static> Reader<Tk> for Memoized<Tk, R
         self.reader.tag()
     }
 
-    fn epsilon(&self, this: &Rc<Reader<Tk>>) -> ReadingResult<Tk> {
+    fn epsilon(&self, this: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
         {
             let mut eps = self.eps.borrow_mut();
             if eps.is_some() {
                 return eps.as_ref().unwrap().clone();
             }
-            *eps = match self.reader.as_any().downcast_ref::<R>() {
-                Some(reader) => Some(reader.epsilon(&self.reader)),
-                None => unimplemented!()
-            }
+            *eps = Some(self.reader.epsilon(this))
         }
         self.epsilon(this)
     }
 
-    fn read(&self, this: &Rc<Reader<Tk>>, token: Tk) -> ReadingResult<Tk> {
+    fn read(&self, this: &Rc<dyn Reader<Tk>>, token: Tk) -> ReadingResult<Tk> {
         {
             let mut res = self.reads[token.id() as usize].borrow_mut();
             if res.is_some() {
                 return res.as_ref().unwrap().clone();
             }
-            *res = match self.reader.as_any().downcast_ref::<R>() {
-                Some(reader) => Some(reader.read(&self.reader, token)),
-                None => unimplemented!()
-            }
+            *res = Some(self.reader.read(this, token))
         }
         self.read(this, token)
     }
@@ -152,5 +138,9 @@ pub fn rc_reader<Tk: Token, R: Reader<Tk> + 'static>(reader: R) -> Rc<dyn Reader
 
 pub fn rc_memo_reader<Tk: Token + 'static, R: Reader<Tk> + 'static>(reader: R, n: usize) -> Rc<dyn Reader<Tk>> {
     Rc::new(Memoized::new(reader, n))
+}
+
+fn rc_memo_reader_from<Tk: Token + 'static, R: Reader<Tk> + 'static>(reader: R, from: &R) -> Rc<dyn Reader<Tk>> {
+    Rc::new(Memoized::new(reader, Memoized::as_memoized(from).reads.len()))
 }
 

@@ -11,7 +11,7 @@ pub enum Policy {
 
 #[derive(Clone, Debug)]
 pub enum Trace {
-    Switch(usize, Policy),
+    Switch(TokenId, Policy),
     Rec(Rc<List<Trace>>),
     Tmp(Rc<StackedReader>),
 }

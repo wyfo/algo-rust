@@ -20,12 +20,12 @@ pub trait Decide<Tk: Token> where Self: 'static + Sized + Reader<Tk> {
     fn of(succeeded: Option<Rc<dyn Reader<Tk>>>, still_ongoing: Option<Rc<dyn Reader<Tk>>>,
           success_trace: Option<Rc<List<Trace>>>, trace_index: usize) -> Option<Rc<dyn Reader<Tk>>> {
         if succeeded.is_some() && still_ongoing.is_some() {
-            Some(Rc::new(Self::new(PolicyReader {
+            Some(rc_reader(Self::new(PolicyReader {
                 succeeded: succeeded.unwrap(),
                 still_ongoing: still_ongoing.unwrap(),
                 success_trace: success_trace.unwrap(),
                 trace_index,
-            })) as Rc<dyn Reader<Tk>>)
+            })))
         } else {
             succeeded.or(still_ongoing)
         }
@@ -135,17 +135,5 @@ impl<Tk: Token> TreeBuilder for LoopPolicyReader<Tk> {
 
     fn node_builder(&self) -> NodeBuilder {
         unimplemented!()
-    }
-}
-
-impl<Tk: Token + 'static> AsAny for ListPolicyReader<Tk> {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-}
-
-impl<Tk: Token + 'static> AsAny for LoopPolicyReader<Tk> {
-    fn as_any(&self) -> &dyn Any {
-        self
     }
 }

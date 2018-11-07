@@ -45,7 +45,7 @@ impl<Tk: Token + 'static> LoopReader<Tk> {
     }
 
     fn shift(&self, this: &Rc<dyn Reader<Tk>>, traces: Rc<List<Trace>>) -> Rc<dyn Reader<Tk>> {
-        Rc::new(LoopReader {
+        rc_memo_reader_from(LoopReader {
             stacked: StackedReader::new(Self::as_stacked_reader(this), traces.clone()),
             ref_: self.ref_.clone(),
             variant: self.first_variant(),
@@ -53,11 +53,11 @@ impl<Tk: Token + 'static> LoopReader<Tk> {
             policy: self.policy,
             ordering: self.ordering,
             tag: self.tag,
-        }) as Rc<dyn Reader<Tk>>
+        }, self)
     }
 
     fn replace(&self, _: &Rc<dyn Reader<Tk>>, ongoing: Rc<dyn Reader<Tk>>) -> Rc<dyn Reader<Tk>> {
-        Rc::new(LoopReader {
+        rc_memo_reader_from(LoopReader {
             stacked: self.stacked.clone(),
             ref_: self.ref_.clone(),
             variant: ongoing,
@@ -65,7 +65,7 @@ impl<Tk: Token + 'static> LoopReader<Tk> {
             policy: self.policy,
             ordering: self.ordering,
             tag: self.tag,
-        }) as Rc<dyn Reader<Tk>>
+        }, self)
     }
 }
 
@@ -102,11 +102,5 @@ impl<Tk: Token> TreeBuilder for LoopReader<Tk> {
 
     fn node_builder(&self) -> NodeBuilder {
         (Box::new(repeat(self.ref_.as_ref().as_tree_builder())), self.tag)
-    }
-}
-
-impl<Tk: Token + 'static> AsAny for LoopReader<Tk> {
-    fn as_any(&self) -> &dyn Any {
-        self
     }
 }

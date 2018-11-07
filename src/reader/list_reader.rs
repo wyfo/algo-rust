@@ -32,11 +32,23 @@ impl<Tk: Token + 'static> ListReader<Tk> {
             Some(self.elts[cursor].clone())
         };
         let stacked = StackedReader::new(Self::as_stacked_reader(this), traces.clone());
-        Rc::new(ListReader { stacked, elts: self.elts.clone(), cur_elt, cursor, tag: self.tag }) as Rc<dyn Reader<Tk>>
+        rc_memo_reader_from(ListReader {
+            stacked,
+            elts: self.elts.clone(),
+            cur_elt,
+            cursor,
+            tag: self.tag,
+        }, self)
     }
 
     fn replace(&self, _: &Rc<dyn Reader<Tk>>, ongoing: Rc<dyn Reader<Tk>>) -> Rc<dyn Reader<Tk>> {
-        Rc::new(ListReader { stacked: self.stacked.clone(), elts: self.elts.clone(), cur_elt: Some(ongoing), cursor: self.cursor, tag: self.tag }) as Rc<dyn Reader<Tk>>
+        rc_memo_reader_from(ListReader {
+            stacked: self.stacked.clone(),
+            elts: self.elts.clone(),
+            cur_elt: Some(ongoing),
+            cursor: self.cursor,
+            tag: self.tag,
+        }, self)
     }
 
     fn process(&self, this: &Rc<dyn Reader<Tk>>, to_res: impl Fn(&Rc<dyn Reader<Tk>>) -> ReadingResult<Tk>) -> ReadingResult<Tk> {
@@ -83,11 +95,5 @@ impl<Tk: Token + 'static> TreeBuilder for ListReader<Tk> {
 
     fn node_builder(&self) -> NodeBuilder {
         (Box::new(self.elts.iter().map(|elt| elt.as_tree_builder())), self.tag)
-    }
-}
-
-impl<Tk: Token + 'static> AsAny for ListReader<Tk> {
-    fn as_any(&self) -> &dyn Any {
-        self
     }
 }
