@@ -47,7 +47,7 @@ impl<'a> Iterator for TokenIter<'a> {
 
     fn next(&mut self) -> Option<Result<Token, NoToken>> {
         if self.remaining_bytes.len() == 0 { return None; }
-        let parsing_res = parse(self.remaining_bytes, &self.lexer);
+        let parsing_res = parse(self.remaining_bytes.iter().cloned(), &self.lexer);
         if let Some(success) = parsing_res.success {
             let id = match success.peek() {
                 Trace::Switch(id, _) => *id,
@@ -73,7 +73,15 @@ impl<'a> Iterator for TokenIter<'a> {
     }
 }
 
-fn tokenize(s: &String, rules: Vec<Rc<dyn Reader<u8>>>) -> TokenIter {
-    let lexer = rc_memo_reader(SwitchReader::new(rules, Policy::Longest, None), 256);
+fn tokenize(s: &String, lexer: Rc<dyn Reader<u8>>) -> TokenIter {
     TokenIter { bytes_consumed: 0, remaining_bytes: s.as_bytes(), lexer }
+}
+
+fn tokenize_to_vec(s: &String, lexer: Rc<dyn Reader<u8>>) -> Result<Vec<Token>, NoToken> {
+    let mut vec = Vec::new();
+    for res_token in tokenize(s, lexer) {
+        let token = res_token?;
+        vec.push(token)
+    }
+    Ok(vec)
 }

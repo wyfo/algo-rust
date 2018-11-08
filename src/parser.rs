@@ -18,7 +18,7 @@ impl ParsingResult {
     }
 }
 
-pub fn parse<Tk: reader::Token>(tokens: &[Tk], reader: &Rc<dyn Reader<Tk>>) -> ParsingResult {
+pub fn parse<Tk: reader::Token>(tokens: impl IntoIterator<Item=Tk>, reader: &Rc<dyn Reader<Tk>>) -> ParsingResult {
     let eps = epsilon(reader);
     let mut reader = eps.ongoing;
     let mut success = eps.success;
@@ -27,11 +27,12 @@ pub fn parse<Tk: reader::Token>(tokens: &[Tk], reader: &Rc<dyn Reader<Tk>>) -> P
     for tk in tokens {
         nb_tokens_read += 1;
         if reader.is_none() { break; }
-        let res = read(reader.as_ref().unwrap(), *tk);
+        let res = read(reader.as_ref().unwrap(), tk);
         if res.success.is_some() {
             success = res.success;
             success_len = nb_tokens_read;
         }
+        reader = res.ongoing;
     }
     ParsingResult { success, success_len, nb_tokens_read }
 }

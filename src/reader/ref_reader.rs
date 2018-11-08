@@ -6,7 +6,13 @@ use std::any::Any;
 
 #[derive(Debug)]
 pub struct RefReader<Tk: Token> {
-    val: Option<Rc<dyn Reader<Tk>>>
+    pub val: Option<Rc<dyn Reader<Tk>>>
+}
+
+impl<Tk: Token> RefReader<Tk> {
+    pub fn new() -> Self {
+        RefReader {val: None}
+    }
 }
 
 impl<Tk: Token + 'static> Reader<Tk> for RefReader<Tk> {
