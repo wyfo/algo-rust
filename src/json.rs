@@ -39,7 +39,8 @@ fn str_reader(table: &mut SymbolTable, s: &str) -> Rc<dyn Reader<u8>> {
 }
 
 fn opt_reader<Tk: Token + 'static>(reader: Rc<dyn Reader<Tk>>, nb: usize) -> Rc<dyn Reader<Tk>> {
-    rc_memo_reader(SwitchReader::new(vec![reader, rc_reader(EpsilonReader)], Policy::Longest, None), nb)
+//    rc_memo_reader(SwitchReader::new(vec![rc_reader(EpsilonReader), reader], Policy::Longest, None), nb)
+    rc_reader(OptionalReader::new(reader))
 }
 
 fn token_reader(token: Rc<dyn Reader<u8>>, token_ids: &HashMap<*const dyn Reader<u8>, TokenId>) -> Rc<dyn Reader<&'static lexer::Token>> {
@@ -175,6 +176,7 @@ pub fn tokenize_to_vec(s: &String, lexer: Rc<dyn Reader<u8>>, table: &mut Symbol
 }
 
 use std::time::Instant;
+use reader::optional_reader::OptionalReader;
 
 pub fn parse_json(s: &String, table: &mut SymbolTable) -> Option<(Vec<Rc<lexer::Token>>, Tree<Rc<lexer::Token>>)> {
     let (lxr, prsr) = json_grammar(table);
@@ -188,6 +190,7 @@ pub fn parse_json(s: &String, table: &mut SymbolTable) -> Option<(Vec<Rc<lexer::
             return None;
         },
     };
+    let start2 = Instant::now();
     println!("PARSING STARTED");
     let res = parser::parse(tokens.iter().map(|tk| unsafe {&*(tk.as_ref() as *const _)}), &prsr);
     let success = match res.success {
@@ -195,8 +198,10 @@ pub fn parse_json(s: &String, table: &mut SymbolTable) -> Option<(Vec<Rc<lexer::
         None => return None,
     };
     println!("PARSING DONE");
+    let time = Instant::now();
+    println!("lexing = {:?}", start2.duration_since(start));
+    println!("parsing = {:?}", time.duration_since(start2));
+    println!("time = {:?}", time.duration_since(start));
     let tree = tree_from_trace(prsr.as_tree_builder(), &success, &tokens);
-    let time = start.elapsed();
-    println!("time = {:?}", time);
     Some((tokens, tree))
 }

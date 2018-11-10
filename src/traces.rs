@@ -47,7 +47,7 @@ pub fn new_traces() -> Rc<List<Trace>> {
         match _EMPTY_TRACES {
             None => {
                 _EMPTY_TRACES = Option::Some(Rc::new(List::Nil::<Trace>));
-                new_traces()
+                _EMPTY_TRACES.as_ref().unwrap().clone()
             },
             Some(ref v) => v.clone(),
         }

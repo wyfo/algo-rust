@@ -8,8 +8,8 @@ use trees::*;
 use std::fmt::Debug;
 use std::fmt::Formatter;
 use std::fmt::Error;
-use itertools::Itertools;
 use reader::epsilon_reader::EpsilonReader;
+use traces::new_traces;
 
 pub struct OptionalReader<Tk: Token> {
     pub reader: Rc<dyn Reader<Tk>>,
@@ -23,18 +23,25 @@ impl<Tk: Token> Debug for OptionalReader<Tk> {
 }
 
 impl<Tk: Token> OptionalReader<Tk> {
-    fn new(reader: Rc<dyn Reader<Tk>>) -> Self {
+    pub fn new(reader: Rc<dyn Reader<Tk>>) -> Self {
         OptionalReader { reader, eps: EpsilonReader }
     }
 }
 
 impl<Tk: Token + 'static> Reader<Tk> for OptionalReader<Tk> {
     fn epsilon(&self, this: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
-        EpsilonReader.epsilon(this)
+        ReadingResult {
+            success: Some(new_traces().push(Trace::Switch(0, Policy::Longest))),
+            ongoing: epsilon(&self.reader).ongoing.map(|o|rc_reader(OptionalReader::new(o))),
+        }
     }
 
     fn read(&self, _: &Rc<dyn Reader<Tk>>, token: Tk) -> ReadingResult<Tk> {
-        read(&self.reader, token)
+        let ReadingResult { success, ongoing } = read(&self.reader, token);
+        ReadingResult {
+            success: success.map(|s| s.push(Trace::Switch(1, Policy::Longest))),
+            ongoing: ongoing.map(|o| rc_reader(OptionalReader::new(o))),
+        }
     }
 }
 

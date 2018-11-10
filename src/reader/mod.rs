@@ -68,11 +68,15 @@ pub trait Reader<Tk: Token>: TreeBuilder + Debug {
 }
 
 pub fn epsilon<Tk: Token>(this: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
-    this.epsilon(this)
+    let res = this.epsilon(this);
+//    println!("EPSILON res: {:?}", &res);
+    res
 }
 
 pub fn read<Tk: Token>(this: &Rc<dyn Reader<Tk>>, token: Tk) -> ReadingResult<Tk> {
-    this.read(this, token)
+    let res = this.read(this, token);
+//    println!("READ {} res: {:?}", token.desc(), &res);
+    res
 }
 
 pub struct Memoized<Tk: Token, R: Reader<Tk>> {
