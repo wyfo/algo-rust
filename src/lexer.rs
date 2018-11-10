@@ -2,38 +2,44 @@ use list::List;
 use list::Stack;
 use parser::parse;
 use reader;
-use reader::epsilon;
-use reader::rc_memo_reader;
-use reader::read;
 use reader::Reader;
-use reader::switch_reader::SwitchReader;
-use std::fmt::Debug;
-use std::iter::empty;
 use std::rc::Rc;
 use symbols::Symbol;
-use traces::Policy;
 use traces::Trace;
 use trees::SwitchBuilder;
+use std::fmt::Debug;
+use std::fmt::Formatter;
+use std::fmt::Error;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Token {
-    name: Symbol,
-    traces: Rc<List<Trace>>,
-    start: usize,
-    stop: usize,
+    pub name: Symbol,
+    pub traces: Rc<List<Trace>>,
+    pub start: usize,
+    pub stop: usize,
     id: reader::TokenId,
+}
+
+impl Debug for Token {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "{}", self.id)
+    }
 }
 
 impl<'a> reader::Token for &'a Token {
     fn id(&self) -> reader::TokenId {
         self.id
     }
+
+    fn desc(&self) -> String {
+        self.name.to_string()
+    }
 }
 
 #[derive(Clone, Debug)]
 pub struct NoToken {
-    start: usize,
-    stop: usize,
+    pub start: usize,
+    pub stop: usize,
 }
 
 pub struct TokenIter<'a> {
@@ -54,7 +60,7 @@ impl<'a> Iterator for TokenIter<'a> {
                 _ => panic!()
             };
             let name = match self.lexer.as_tree_builder().switch_builder(id) {
-                SwitchBuilder::Case(_, Some(name)) => name,
+                SwitchBuilder::Case(case, _) => case.tag().unwrap(),
                 _ => panic!()
             };
             let token = Token {
@@ -73,15 +79,7 @@ impl<'a> Iterator for TokenIter<'a> {
     }
 }
 
-fn tokenize(s: &String, lexer: Rc<dyn Reader<u8>>) -> TokenIter {
+pub fn tokenize(s: &String, lexer: Rc<dyn Reader<u8>>) -> TokenIter {
     TokenIter { bytes_consumed: 0, remaining_bytes: s.as_bytes(), lexer }
 }
 
-fn tokenize_to_vec(s: &String, lexer: Rc<dyn Reader<u8>>) -> Result<Vec<Token>, NoToken> {
-    let mut vec = Vec::new();
-    for res_token in tokenize(s, lexer) {
-        let token = res_token?;
-        vec.push(token)
-    }
-    Ok(vec)
-}

@@ -6,14 +6,197 @@ use reader::rc_reader;
 use reader::ref_reader::RefReader;
 use reader::token_reader::TokenReader;
 use symbols::SymbolTable;
+use symbols::Tag;
+use reader::list_reader::ListReader;
+use reader::conditional_token_reader::ConditionalTokenReader;
+use reader::switch_reader::SwitchReader;
+use traces::Policy;
+use reader::loop_reader::LoopReader;
+use reader::loop_reader::LoopOrdering;
+use reader::epsilon_reader::EpsilonReader;
+use std::collections::HashMap;
+use reader::TokenId;
+use trees::Tree;
+use parser;
+use trees::tree_from_trace;
+use reader::rc_memo_reader;
 
-fn json_grammar(table: &mut SymbolTable) -> (Rc<dyn Reader<usize>>, Rc<dyn Reader<&'static lexer::Token>>) {
-    let tag = |s| Some(table.get(s));
-    let char_reader = |c: char| rc_reader(TokenReader {token_ref: c.id(), tag: tag(&c.to_string())});
+fn tag(table: &mut SymbolTable, s: &str) -> Tag { Some(table.get(s)) }
 
-    let LEFT_BRACE = char_reader('{');
-    let RIGHT_BRACE = char_reader('}');
-    let COMMA = char_reader(',');
-    let value = rc_reader(RefReader::new());
-    (COMMA, value)
+fn char_reader(c: char) -> Rc<dyn Reader<u8>> {
+    rc_reader(TokenReader { token_ref: c.id(), tag: None })
+//    rc_reader(ConditionalTokenReader::include(vec![c.id() as u8], 256, None))
+}
+
+fn char_reader2(table: &mut SymbolTable, c: char) -> Rc<dyn Reader<u8>> {
+    rc_reader(TokenReader { token_ref: c.id(), tag: tag(table, &c.to_string()) })
+//    rc_reader(ConditionalTokenReader::include(vec![c.id() as u8], 256, tag(table, &c.to_string())))
+}
+
+fn str_reader(table: &mut SymbolTable, s: &str) -> Rc<dyn Reader<u8>> {
+    let elts = s.chars().map(|c| char_reader(c)).collect();
+    rc_memo_reader(ListReader::new(elts, tag(table, s)), 256)
+}
+
+fn opt_reader<Tk: Token + 'static>(reader: Rc<dyn Reader<Tk>>, nb: usize) -> Rc<dyn Reader<Tk>> {
+    rc_memo_reader(SwitchReader::new(vec![reader, rc_reader(EpsilonReader)], Policy::Longest, None), nb)
+}
+
+fn token_reader(token: Rc<dyn Reader<u8>>, token_ids: &HashMap<*const dyn Reader<u8>, TokenId>) -> Rc<dyn Reader<&'static lexer::Token>> {
+    rc_reader(TokenReader { token_ref: token_ids[&Rc::into_raw(token)], tag: None })
+//    rc_reader(ConditionalTokenReader::include(vec![token_ids[&Rc::into_raw(token)] as u8], 256, None))
+}
+
+fn json_grammar(table: &mut SymbolTable) -> (Rc<dyn Reader<u8>>, Rc<dyn Reader<&'static lexer::Token>>) {
+    let LEFT_BRACE = char_reader2(table, '{');
+    let RIGHT_BRACE = char_reader2(table, '}');
+    let COMMA = char_reader2(table, ',');
+    let COLON = char_reader2(table, ':');
+    let LEFT_BRACKET = char_reader2(table, '[');
+    let RIGHT_BRACKET = char_reader2(table, ']');
+    let DOUBLE_QUOTE = char_reader('"');
+    let MINUS = char_reader('-');
+    let DOT = char_reader('.');
+    let BACKSLASH = char_reader('\\');
+    let TRUE = str_reader(table, "true");
+    let FALSE = str_reader(table, "false");
+    let NULL = str_reader(table, "null");
+    let WS = rc_reader(ConditionalTokenReader::include(" \t\n\r".as_bytes().to_vec(), 256, tag(table, "WS")));
+    let DIGIT = rc_reader(ConditionalTokenReader::include("0123456789".as_bytes().to_vec(), 256, None));
+    let INT = rc_memo_reader(ListReader::new(vec![
+        DIGIT.clone(),
+        rc_memo_reader(LoopReader::new(DIGIT.clone(), Policy::Longest, LoopOrdering::Increasing, None), 256),
+    ], None), 256);
+    let EXP = rc_memo_reader(ListReader::new(vec![
+        rc_reader(ConditionalTokenReader::include("eE".as_bytes().to_vec(), 256, None)),
+        opt_reader(rc_reader(ConditionalTokenReader::include("+-".as_bytes().to_vec(), 256, None)), 256),
+        INT.clone(),
+    ], None), 256);
+    let NUMBER = rc_memo_reader(ListReader::new(vec![
+        opt_reader(MINUS, 256),
+        INT.clone(),
+        opt_reader(rc_memo_reader(ListReader::new(vec![
+            DOT,
+            INT.clone(),
+        ], None), 256), 256),
+        opt_reader(EXP, 256),
+    ], tag(table, "NUMBER")), 256);
+    let HEX = rc_reader(ConditionalTokenReader::include("0123456789ABCDEFabcdef".as_bytes().to_vec(), 256, None));
+    let UNICODE = rc_memo_reader(ListReader::new(vec![char_reader('u'), HEX.clone(), HEX.clone(), HEX.clone(), HEX.clone()], None), 256);
+    let ESC = rc_memo_reader(ListReader::new(vec![
+        BACKSLASH,
+        rc_memo_reader(SwitchReader::new(vec![
+            rc_reader(ConditionalTokenReader::include("\"\\nt".as_bytes().to_vec(), 256, None)),
+        UNICODE,
+        ], Policy::Longest, None), 256),
+    ], None), 256);
+    let STRING = rc_memo_reader(ListReader::new(vec![
+        DOUBLE_QUOTE.clone(),
+        rc_memo_reader(LoopReader::new(rc_memo_reader(SwitchReader::new(vec![
+            ESC,
+            rc_reader(ConditionalTokenReader::exclude("\\\"".as_bytes().to_vec(), 256, None)),
+        ], Policy::Longest, None), 256), Policy::Longest, LoopOrdering::Increasing, None), 256),
+        DOUBLE_QUOTE.clone(),
+    ], tag(table, "STRING")), 256);
+
+    let tokens = vec![
+        LEFT_BRACE.clone(),
+        RIGHT_BRACE.clone(),
+        COMMA.clone(),
+        COLON.clone(),
+        LEFT_BRACKET.clone(),
+        RIGHT_BRACKET.clone(),
+        TRUE.clone(),
+        FALSE.clone(),
+        NULL.clone(),
+        WS.clone(),
+        NUMBER.clone(),
+        STRING.clone(),
+    ];
+    let token_ids: HashMap<_, _> = tokens.iter().enumerate().map(|p| (Rc::into_raw(p.1.clone()), p.0 as TokenId)).collect();
+
+    let value = rc_reader(RefReader::<&'static lexer::Token>::new());
+    let array = rc_memo_reader(ListReader::new(vec![
+        token_reader(LEFT_BRACKET.clone(), &token_ids),
+        opt_reader(rc_memo_reader(ListReader::new(vec![
+            value.clone(),
+            rc_memo_reader(LoopReader::new(
+                rc_memo_reader(ListReader::new(vec![
+                    token_reader(COMMA.clone(), &token_ids),
+                    value.clone()
+                ], None), tokens.len()),
+                Policy::Longest, LoopOrdering::Increasing, None,
+            ), tokens.len())
+        ], None), tokens.len()), tokens.len()),
+        token_reader(RIGHT_BRACKET.clone(), &token_ids),
+    ], tag(table, "array")), tokens.len());
+    let pair = rc_memo_reader(ListReader::new(vec![
+        token_reader(STRING.clone(), &token_ids),
+        token_reader(COLON.clone(), &token_ids),
+        value.clone()
+    ], tag(table, "pair")), tokens.len());
+    let obj = rc_memo_reader(ListReader::new(vec![
+        token_reader(LEFT_BRACE.clone(), &token_ids),
+        opt_reader(rc_memo_reader(ListReader::new(vec![
+            pair.clone(),
+            rc_memo_reader(LoopReader::new(
+                rc_memo_reader(ListReader::new(vec![
+                    token_reader(COMMA.clone(), &token_ids),
+                    pair.clone()
+                ], None), tokens.len()),
+                Policy::Longest, LoopOrdering::Increasing, None,
+            ), tokens.len())
+        ], None), tokens.len()), tokens.len()),
+        token_reader(RIGHT_BRACE.clone(), &token_ids),
+    ], tag(table, "obj")), tokens.len());
+    let value = RefReader::set(value, rc_memo_reader(SwitchReader::new(vec![
+        token_reader(STRING.clone(), &token_ids),
+        token_reader(NUMBER.clone(), &token_ids),
+        obj,
+        array,
+        token_reader(TRUE.clone(), &token_ids),
+        token_reader(FALSE.clone(), &token_ids),
+        token_reader(NULL.clone(), &token_ids),
+    ], Policy::Longest, tag(table, "value")), tokens.len()));
+    let json = value.clone();
+
+
+    (rc_memo_reader(SwitchReader::new(tokens, Policy::Longest, None), 256), json)
+}
+
+pub fn tokenize_to_vec(s: &String, lexer: Rc<dyn Reader<u8>>, table: &mut SymbolTable) -> Result<Vec<Rc<lexer::Token>>, lexer::NoToken> {
+    let ws = table.get("WS");
+    let mut vec = Vec::new();
+    for res_token in lexer::tokenize(s, lexer) {
+        let token = res_token?;
+        if token.name != ws { vec.push(Rc::new(token)) }
+    }
+    Ok(vec)
+}
+
+use std::time::Instant;
+
+pub fn parse_json(s: &String, table: &mut SymbolTable) -> Option<(Vec<Rc<lexer::Token>>, Tree<Rc<lexer::Token>>)> {
+    let (lxr, prsr) = json_grammar(table);
+    let start = Instant::now();
+    println!("{:?}", &table);
+    println!("LEXING STARTED");
+    let tokens = match tokenize_to_vec(s, lxr, table) {
+        Ok(tks) => tks,
+        Err(no_token) => {
+            println!("No token found ad {} - {}", no_token.start, no_token.stop);
+            return None;
+        },
+    };
+    println!("PARSING STARTED");
+    let res = parser::parse(tokens.iter().map(|tk| unsafe {&*(tk.as_ref() as *const _)}), &prsr);
+    let success = match res.success {
+        Some(s) => s,
+        None => return None,
+    };
+    println!("PARSING DONE");
+    let tree = tree_from_trace(prsr.as_tree_builder(), &success, &tokens);
+    let time = start.elapsed();
+    println!("time = {:?}", time);
+    Some((tokens, tree))
 }

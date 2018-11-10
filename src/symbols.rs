@@ -1,5 +1,8 @@
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
+use std::fmt::Debug;
+use std::fmt::Formatter;
+use std::fmt::Error;
 
 pub type Symbol = NonZeroUsize;
 
@@ -8,6 +11,14 @@ type InternStrRef = &'static str;
 pub struct SymbolTable {
     storage: Vec<Box<str>>,
     map: HashMap<InternStrRef, Symbol>,
+}
+
+impl Debug for SymbolTable {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        let mut symbols = self.map.iter().collect::<Vec<_>>().clone();
+        symbols.sort_by_key(|(_, sym)| *sym);
+        write!(f, "SymbolTable {{{:?}}}", symbols)
+    }
 }
 
 impl SymbolTable {

@@ -5,20 +5,32 @@ use symbols::Tag;
 use traces::Policy;
 use traces::Trace;
 use trees::*;
-use std::any::Any;
+use std::fmt::Debug;
+use std::fmt::Formatter;
+use std::fmt::Error;
+use itertools::Itertools;
 
 type Case<Tk> = (Rc<dyn Reader<Tk>>, usize);
 
-#[derive(Debug)]
 pub struct SwitchReader<Tk: Token> {
     pub cases: Vec<Case<Tk>>,
     policy: Policy,
     pub tag: Tag,
 }
 
+impl<Tk: Token> Debug for SwitchReader<Tk> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "({})", self.cases.iter().map(|c| format!("{:?}", c.0)).join(" | "))
+    }
+}
+
 impl<Tk: Token + 'static> SwitchReader<Tk> {
     pub fn new(cases: Vec<Rc<dyn Reader<Tk>>>, policy: Policy, tag: Tag) -> SwitchReader<Tk> {
-        SwitchReader { cases: cases.iter().enumerate().map(|t| (t.1.clone(), t.0 as usize)).collect(), policy, tag }
+        SwitchReader {
+            cases: cases.iter().enumerate().map(|t| (t.1.clone(), t.0 as usize)).collect(),
+            policy,
+            tag,
+        }
     }
 
     fn process(&self, to_res: impl Fn(&Rc<dyn Reader<Tk>>) -> ReadingResult<Tk>) -> ReadingResult<Tk> {
@@ -38,10 +50,6 @@ impl<Tk: Token + 'static> SwitchReader<Tk> {
 }
 
 impl<Tk: Token + 'static> Reader<Tk> for SwitchReader<Tk> {
-    fn tag(&self) -> Tag {
-        self.tag
-    }
-
     fn epsilon(&self, _: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
         self.process(epsilon)
     }
@@ -52,6 +60,10 @@ impl<Tk: Token + 'static> Reader<Tk> for SwitchReader<Tk> {
 }
 
 impl<Tk: Token> TreeBuilder for SwitchReader<Tk> {
+    fn tag(&self) -> Tag {
+        self.tag
+    }
+
     fn leaf_builder(&self) -> LeafBuilder {
         unimplemented!()
     }

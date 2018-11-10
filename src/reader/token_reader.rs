@@ -3,20 +3,22 @@ use std::rc::Rc;
 use symbols::Tag;
 use trees::*;
 use traces::*;
-use list::*;
-use std::any::Any;
+use std::fmt::Debug;
+use std::fmt::Formatter;
+use std::fmt::Error;
 
-#[derive(Debug)]
 pub struct TokenReader {
     pub token_ref: usize,
     pub tag: Tag,
 }
 
-impl<Tk: Token> Reader<Tk> for TokenReader {
-    fn tag(&self) -> Tag {
-        self.tag
+impl Debug for TokenReader {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "'{}'", self.token_ref)
     }
+}
 
+impl<Tk: Token> Reader<Tk> for TokenReader {
     fn epsilon(&self, this: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
         ReadingResult { success: None, ongoing: Some(this.clone()) }
     }
@@ -30,6 +32,10 @@ impl<Tk: Token> Reader<Tk> for TokenReader {
 }
 
 impl TreeBuilder for TokenReader {
+    fn tag(&self) -> Tag {
+        self.tag
+    }
+
     fn leaf_builder(&self) -> LeafBuilder {
         LeafBuilder::Token(self.tag)
     }

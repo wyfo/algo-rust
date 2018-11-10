@@ -1,11 +1,19 @@
-use std::any::Any;
 use std::ops::Index;
 use std::rc::Rc;
+use std::fmt::Debug;
+use std::fmt::Formatter;
+use std::fmt::Error;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum List<T> {
     Cons(T, Rc<List<T>>),
     Nil,
+}
+
+impl<T: Debug + Clone> Debug for List<T> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "{:?}", self.iter().collect::<Vec<_>>())
+    }
 }
 
 impl<T: Clone> Index<usize> for List<T> {

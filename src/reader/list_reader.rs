@@ -5,9 +5,10 @@ use std::rc::Rc;
 use symbols::Tag;
 use traces::*;
 use trees::*;
-use std::any::Any;
+use std::fmt::Debug;
+use std::fmt::Formatter;
+use std::fmt::Error;
 
-#[derive(Debug)]
 pub struct ListReader<Tk: Token> {
     stacked: StackedReader,
     pub elts: Rc<Vec<Rc<dyn Reader<Tk>>>>,
@@ -16,12 +17,24 @@ pub struct ListReader<Tk: Token> {
     pub tag: Tag,
 }
 
+impl<Tk: Token> Debug for ListReader<Tk> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "{:?}{}", self.elts, if self.cursor == self.elts.len() {"".to_string()} else {format!(":{}", self.cursor)})
+    }
+}
+
 impl<Tk: Token> AsStackedReader<Tk> for ListReader<Tk> {}
 
 impl<Tk: Token + 'static> ListReader<Tk> {
     pub fn new(elts: Vec<Rc<dyn Reader<Tk>>>, tag: Tag) -> ListReader<Tk> {
         let first = elts[0].clone();
-        ListReader { stacked: StackedReader::without_parent(), elts: Rc::new(elts), cur_elt: Some(first), cursor: 0, tag }
+        ListReader {
+            stacked: StackedReader::without_parent(),
+            elts: Rc::new(elts),
+            cur_elt: Some(first),
+            cursor: 0,
+            tag,
+        }
     }
 
     fn shift(&self, this: &Rc<dyn Reader<Tk>>, traces: Rc<List<Trace>>) -> Rc<dyn Reader<Tk>> {
@@ -71,10 +84,6 @@ impl<Tk: Token + 'static> ListReader<Tk> {
 }
 
 impl<Tk: Token + 'static> Reader<Tk> for ListReader<Tk> {
-    fn tag(&self) -> Tag {
-        self.tag
-    }
-
     fn epsilon(&self, this: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
         self.process(this, epsilon)
     }
@@ -85,6 +94,10 @@ impl<Tk: Token + 'static> Reader<Tk> for ListReader<Tk> {
 }
 
 impl<Tk: Token + 'static> TreeBuilder for ListReader<Tk> {
+    fn tag(&self) -> Tag {
+        self.tag
+    }
+
     fn leaf_builder(&self) -> LeafBuilder {
         unimplemented!()
     }

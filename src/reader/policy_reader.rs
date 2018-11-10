@@ -4,7 +4,6 @@ use std::rc::Rc;
 use traces::Trace;
 use trees::*;
 use symbols::Tag;
-use std::any::Any;
 
 #[derive(Debug)]
 pub struct PolicyReader<Tk: Token> {
@@ -83,10 +82,6 @@ impl<Tk: 'static + Token> Decide<Tk> for LoopPolicyReader<Tk> {
 }
 
 impl<Tk: 'static + Token> Reader<Tk> for ListPolicyReader<Tk> {
-    fn tag(&self) -> Tag {
-        None
-    }
-
     fn epsilon(&self, _: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
         unimplemented!()
     }
@@ -97,10 +92,6 @@ impl<Tk: 'static + Token> Reader<Tk> for ListPolicyReader<Tk> {
 }
 
 impl<Tk: 'static + Token> Reader<Tk> for LoopPolicyReader<Tk> {
-    fn tag(&self) -> Tag {
-        None
-    }
-
     fn epsilon(&self, _: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
         unimplemented!()
     }
@@ -111,6 +102,10 @@ impl<Tk: 'static + Token> Reader<Tk> for LoopPolicyReader<Tk> {
 }
 
 impl<Tk: Token> TreeBuilder for ListPolicyReader<Tk> {
+    fn tag(&self) -> Tag {
+        None
+    }
+
     fn leaf_builder(&self) -> LeafBuilder {
         unimplemented!()
     }
@@ -125,6 +120,10 @@ impl<Tk: Token> TreeBuilder for ListPolicyReader<Tk> {
 }
 
 impl<Tk: Token> TreeBuilder for LoopPolicyReader<Tk> {
+    fn tag(&self) -> Tag {
+        None
+    }
+
     fn leaf_builder(&self) -> LeafBuilder {
         unimplemented!()
     }

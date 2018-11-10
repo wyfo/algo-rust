@@ -3,22 +3,41 @@ use std::rc::Rc;
 use symbols::Tag;
 use trees::*;
 use traces::*;
-use list::*;
-use std::any::Any;
-use std::ops::Index;
 use std::fmt::Debug;
+use std::fmt::Formatter;
+use std::fmt::Error;
 
-#[derive(Debug)]
-pub struct ConditionalTokenReader<Tk: Token, M: Index<usize, Output=ReadingResult<Tk>> + Debug> {
+pub struct ConditionalTokenReader<Tk: Token> {
+    pub matching: Vec<ReadingResult<Tk>>,
     pub tag: Tag,
-    pub matching: M,
 }
 
-impl<Tk: Token + 'static, M: Index<usize, Output=ReadingResult<Tk>> + Debug + 'static> Reader<Tk> for ConditionalTokenReader<Tk, M> {
-    fn tag(&self) -> Tag {
-        self.tag
+impl<Tk: Token> Debug for ConditionalTokenReader<Tk> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "_")
     }
+}
 
+impl<T: Token> ConditionalTokenReader<T> {
+    pub fn success<Tk: Token>() -> ReadingResult<Tk> {
+        ReadingResult { success: Some(new_traces()), ongoing: None }
+    }
+    pub fn fail<Tk: Token>() -> ReadingResult<Tk> {
+        ReadingResult::none()
+    }
+    pub fn include<Tk: Token>(tokens: Vec<Tk>, nb: usize, tag: Tag) -> Self {
+        let mut matching = vec![Self::fail(); nb];
+        for tk in tokens { matching[tk.id()] = Self::success(); }
+        ConditionalTokenReader {matching, tag}
+    }
+    pub fn exclude<Tk: Token>(tokens: Vec<Tk>, nb: usize, tag: Tag) -> Self {
+        let mut matching = vec![Self::success(); nb];
+        for tk in tokens { matching[tk.id()] = Self::fail(); }
+        ConditionalTokenReader {matching, tag}
+    }
+}
+
+impl<Tk: Token> Reader<Tk> for ConditionalTokenReader<Tk> {
     fn epsilon(&self, this: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
         ReadingResult { success: None, ongoing: Some(this.clone()) }
     }
@@ -28,7 +47,11 @@ impl<Tk: Token + 'static, M: Index<usize, Output=ReadingResult<Tk>> + Debug + 's
     }
 }
 
-impl<Tk: Token, M: Index<usize, Output=ReadingResult<Tk>> + Debug> TreeBuilder for ConditionalTokenReader<Tk, M> {
+impl<Tk: Token> TreeBuilder for ConditionalTokenReader<Tk> {
+    fn tag(&self) -> Tag {
+        self.tag
+    }
+
     fn leaf_builder(&self) -> LeafBuilder {
         LeafBuilder::Token(self.tag)
     }

@@ -3,7 +3,6 @@ use std::rc::Rc;
 use trees::*;
 use symbols::Symbol;
 use symbols::Tag;
-use std::any::Any;
 
 #[derive(Debug)]
 pub struct TaggerReader<Tk: Token> {
@@ -12,10 +11,6 @@ pub struct TaggerReader<Tk: Token> {
 }
 
 impl<Tk: Token + 'static> Reader<Tk> for TaggerReader<Tk> {
-    fn tag(&self) -> Tag {
-        Some(self.sym)
-    }
-
     fn epsilon(&self, _: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
         epsilon(&self.reader)
     }
@@ -26,6 +21,10 @@ impl<Tk: Token + 'static> Reader<Tk> for TaggerReader<Tk> {
 }
 
 impl<Tk: Token> TreeBuilder for TaggerReader<Tk> {
+    fn tag(&self) -> Tag {
+        Some(self.sym)
+    }
+
     fn is_volatile(&self) -> VolatileBuilder {
         Some((self, Some(self.sym)))
     }

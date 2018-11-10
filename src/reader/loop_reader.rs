@@ -6,7 +6,9 @@ use std::rc::Rc;
 use symbols::Tag;
 use traces::*;
 use trees::*;
-use std::any::Any;
+use std::fmt::Debug;
+use std::fmt::Formatter;
+use std::fmt::Error;
 
 #[derive(Copy, Clone, Debug)]
 pub enum LoopOrdering {
@@ -14,7 +16,6 @@ pub enum LoopOrdering {
     Decreasing = -1,
 }
 
-#[derive(Debug)]
 pub struct LoopReader<Tk: Token> {
     stacked: StackedReader,
     pub ref_: Rc<dyn Reader<Tk>>,
@@ -23,6 +24,12 @@ pub struct LoopReader<Tk: Token> {
     policy: Policy,
     ordering: LoopOrdering,
     pub tag: Tag,
+}
+
+impl<Tk: Token> Debug for LoopReader<Tk> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        write!(f, "{:?}*", self.ref_)
+    }
 }
 
 impl<Tk: Token> AsStackedReader<Tk> for LoopReader<Tk> {}
@@ -70,12 +77,8 @@ impl<Tk: Token + 'static> LoopReader<Tk> {
 }
 
 impl<Tk: Token + 'static> Reader<Tk> for LoopReader<Tk> {
-    fn tag(&self) -> Tag {
-        self.tag
-    }
-
-    fn epsilon(&self, _: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
-        ReadingResult { success: Some(new_traces().push(Trace::Switch(0, self.policy))), ongoing: Some(self.first_variant()) }
+    fn epsilon(&self, this: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
+        ReadingResult { success: Some(new_traces().push(Trace::Switch(0, self.policy))), ongoing: Some(self.replace(this, self.first_variant())) }
     }
 
     fn read(&self, this: &Rc<dyn Reader<Tk>>, token: Tk) -> ReadingResult<Tk> {
@@ -92,8 +95,12 @@ impl<Tk: Token + 'static> Reader<Tk> for LoopReader<Tk> {
 }
 
 impl<Tk: Token> TreeBuilder for LoopReader<Tk> {
+    fn tag(&self) -> Tag {
+        self.tag
+    }
+
     fn leaf_builder(&self) -> LeafBuilder {
-        unimplemented!()
+        LeafBuilder::Epsilon(self.tag)
     }
 
     fn switch_builder(&self, _: usize) -> SwitchBuilder {

@@ -1,7 +1,6 @@
 use std::rc::Rc;
 use list::List;
 use reader::*;
-use std::any::Any;
 
 #[derive(Copy, Clone, Debug)]
 pub enum Policy {

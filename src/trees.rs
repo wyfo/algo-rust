@@ -13,6 +13,7 @@ pub enum Tree<Tk> {
 }
 
 use trees::Tree::*;
+use std::fmt::Debug;
 
 impl<Tk: 'static> Tree<Tk> {
     pub fn tag(&self) -> Tag {
@@ -75,6 +76,7 @@ pub enum SwitchBuilder<'a> {
 pub type NodeBuilder<'a> = (Box<dyn Iterator<Item=&'a dyn TreeBuilder> + 'a>, Tag);
 
 pub trait TreeBuilder: AsTreeBuilder {
+    fn tag(&self) -> Tag;
     fn is_volatile(&self) -> VolatileBuilder {
         None
     }
@@ -93,7 +95,7 @@ impl<T: TreeBuilder> AsTreeBuilder for T {
     }
 }
 
-fn build_node<'a, 'b, Tk: Clone>(elts_with_traces: impl Iterator<Item=(&'a dyn TreeBuilder, &'a List<Trace>)>, tokens: &'b [Tk], tag: Tag) -> (Tree<Tk>, &'b [Tk]) {
+fn build_node<'a, 'b, Tk: Clone + Debug>(elts_with_traces: impl Iterator<Item=(&'a dyn TreeBuilder, &'a List<Trace>)>, tokens: &'b [Tk], tag: Tag) -> (Tree<Tk>, &'b [Tk]) {
     let (children, tokens) = elts_with_traces.fold((Vec::<Tree<Tk>>::new(), tokens),
                                                    |(mut children, tokens), (builder, traces)| {
                                                        let (tree, tokens) = build_rec(builder, traces, tokens);
@@ -111,14 +113,13 @@ fn as_rec_trace(trace: &Trace) -> &List<Trace> {
     }
 }
 
-fn build_rec<'a, 'b, 'c, Tk: Clone>(builder: &'a dyn TreeBuilder, traces: &'b List<Trace>, tokens: &'c [Tk]) -> (Tree<Tk>, &'c [Tk]) {
+fn build_rec<'a, 'b, 'c, Tk: Clone + Debug>(builder: &'a dyn TreeBuilder, traces: &'b List<Trace>, tokens: &'c [Tk]) -> (Tree<Tk>, &'c [Tk]) {
     let add_branch = |next: &dyn TreeBuilder, traces: &List<Trace>, tag: Tag| if tag.is_some() {
         let (tree, tokens) = build_rec(next, traces, tokens);
         (Tree::Node(vec![tree], tag), tokens)
     } else {
         build_rec(next, traces, tokens)
-    }
-    ;
+    };
     let volatile = builder.is_volatile();
     if let Some((next, tag)) = volatile {
         return add_branch(next, traces, tag);
@@ -150,6 +151,6 @@ fn build_rec<'a, 'b, 'c, Tk: Clone>(builder: &'a dyn TreeBuilder, traces: &'b Li
     }
 }
 
-pub fn tree_from_trace<Tk: Clone>(builder: &dyn TreeBuilder, traces: &Rc<List<Trace>>, tokens: &[Tk]) -> Tree<Tk> {
+pub fn tree_from_trace<Tk: Clone + Debug>(builder: &dyn TreeBuilder, traces: &Rc<List<Trace>>, tokens: &[Tk]) -> Tree<Tk> {
     build_rec(builder, &traces, tokens).0
 }
