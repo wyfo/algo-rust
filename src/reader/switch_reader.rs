@@ -25,7 +25,7 @@ impl<Tk: Token> Debug for SwitchReader<Tk> {
 }
 
 impl<Tk: Token + 'static> SwitchReader<Tk> {
-    pub fn new(cases: Vec<Rc<dyn Reader<Tk>>>, policy: Policy, tag: Tag) -> SwitchReader<Tk> {
+    pub fn new(cases: Vec<Rc<dyn Reader<Tk>>>, policy: Policy, tag: Tag) -> Self {
         SwitchReader {
             cases: cases.iter().enumerate().map(|t| (t.1.clone(), t.0 as usize)).collect(),
             policy,
@@ -39,7 +39,7 @@ impl<Tk: Token + 'static> SwitchReader<Tk> {
         let ongoing: Option<Rc<dyn Reader<Tk>>> = if ongoings.is_empty() {
             None
         } else {
-            Some(rc_reader(SwitchReader::<Tk> { cases: ongoings, policy: self.policy, tag: self.tag }))
+            Some(rc_memo_reader_from(SwitchReader::<Tk> { cases: ongoings, policy: self.policy, tag: self.tag }, self))
         };
         let success = results.iter().find(|(c, _)| c.success.is_some()).map(|(c, i)| (c.success.clone().unwrap(), i));
         ReadingResult {
