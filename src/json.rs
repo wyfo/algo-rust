@@ -1,25 +1,27 @@
-use reader::Reader;
-use std::rc::Rc;
 use lexer;
-use reader::Token;
+use parser;
+use reader::conditional_token_reader::ConditionalTokenReader;
+use reader::epsilon_reader::EpsilonReader;
+use reader::list_reader::ListReader;
+use reader::loop_reader::LoopOrdering;
+use reader::loop_reader::LoopReader;
+use reader::optional_reader::OptionalReader;
+use reader::rc_memo_reader;
 use reader::rc_reader;
+use reader::Reader;
 use reader::ref_reader::RefReader;
+use reader::switch_reader::SwitchReader;
+use reader::Token;
 use reader::token_reader::TokenReader;
+use reader::TokenId;
+use std::collections::HashMap;
+use std::rc::Rc;
+use std::time::Instant;
 use symbols::SymbolTable;
 use symbols::Tag;
-use reader::list_reader::ListReader;
-use reader::conditional_token_reader::ConditionalTokenReader;
-use reader::switch_reader::SwitchReader;
 use traces::Policy;
-use reader::loop_reader::LoopReader;
-use reader::loop_reader::LoopOrdering;
-use reader::epsilon_reader::EpsilonReader;
-use std::collections::HashMap;
-use reader::TokenId;
 use trees::Tree;
-use parser;
 use trees::tree_from_trace;
-use reader::rc_memo_reader;
 
 fn tag(table: &mut SymbolTable, s: &str) -> Tag { Some(table.get(s)) }
 
@@ -174,9 +176,6 @@ pub fn tokenize_to_vec(s: &String, lexer: Rc<dyn Reader<u8>>, table: &mut Symbol
     }
     Ok(vec)
 }
-
-use std::time::Instant;
-use reader::optional_reader::OptionalReader;
 
 pub fn parse_json(s: &String, table: &mut SymbolTable) -> Option<(Vec<Rc<lexer::Token>>, Tree<Rc<lexer::Token>>)> {
     let (lxr, prsr) = json_grammar(table);

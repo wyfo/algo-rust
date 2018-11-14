@@ -1,10 +1,10 @@
 use reader::*;
-use std::rc::Rc;
-use trees::*;
-use symbols::Tag;
-use std::fmt::Formatter;
-use std::fmt::Error;
 use std::fmt::Debug;
+use std::fmt::Error;
+use std::fmt::Formatter;
+use std::rc::Rc;
+use symbols::Tag;
+use trees::*;
 
 pub struct RefReader<Tk: Token> {
     pub val: Option<Rc<dyn Reader<Tk>>>
@@ -12,7 +12,7 @@ pub struct RefReader<Tk: Token> {
 
 impl<Tk: Token> Debug for RefReader<Tk> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-        write!(f, "@")
+        write!(f, "@{}", self.val.as_ref().and_then(|reader| reader.tag()).map(|tag| tag.to_string()).unwrap_or("".to_string()))
     }
 }
 

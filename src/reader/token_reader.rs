@@ -1,14 +1,14 @@
 use reader::*;
+use std::fmt::Debug;
+use std::fmt::Error;
+use std::fmt::Formatter;
 use std::rc::Rc;
 use symbols::Tag;
-use trees::*;
 use traces::*;
-use std::fmt::Debug;
-use std::fmt::Formatter;
-use std::fmt::Error;
+use trees::*;
 
 pub struct TokenReader {
-    pub token_ref: usize,
+    pub token_ref: TokenId,
     pub tag: Tag,
 }
 

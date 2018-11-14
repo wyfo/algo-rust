@@ -1,10 +1,14 @@
 use std::collections::HashMap;
-use std::num::NonZeroUsize;
 use std::fmt::Debug;
-use std::fmt::Formatter;
 use std::fmt::Error;
+use std::fmt::Formatter;
+use std::num::NonZeroUsize;
 
 pub type Symbol = NonZeroUsize;
+
+pub fn dummy_symbol() -> Symbol {
+    unsafe { Symbol::new_unchecked(1) }
+}
 
 type InternStrRef = &'static str;
 

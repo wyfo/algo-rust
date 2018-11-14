@@ -5,12 +5,8 @@ use std::fmt::Error;
 use std::fmt::Formatter;
 use std::rc::Rc;
 use symbols::Tag;
-use traces::*;
-use trees::LeafBuilder;
-use trees::NodeBuilder;
-use trees::SwitchBuilder;
-use trees::TreeBuilder;
-use trees::VolatileBuilder;
+use traces::Trace;
+use trees::*;
 
 pub mod epsilon_reader;
 pub mod list_reader;
@@ -27,16 +23,14 @@ pub type TokenId = usize;
 
 pub trait Token: Copy + Debug {
     fn id(&self) -> TokenId;
-    fn desc(&self) -> String;
+    fn desc(&self) -> String {
+        self.id().to_string().replace("\n", "\\n")
+    }
 }
 
 impl Token for u8 {
     fn id(&self) -> TokenId {
         return *self as usize;
-    }
-
-    fn desc(&self) -> String {
-        return (*self as char).to_string().replace("\n", "\\n")
     }
 }
 
@@ -44,9 +38,11 @@ impl Token for char {
     fn id(&self) -> TokenId {
         return *self as usize;
     }
+}
 
-    fn desc(&self) -> String {
-        return self.to_string().replace("\n", "\\n")
+impl Token for TokenId {
+    fn id(&self) -> TokenId {
+        *self
     }
 }
 
