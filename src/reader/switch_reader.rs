@@ -1,14 +1,15 @@
+use itertools::Itertools;
 use list::Stack;
 use reader::*;
+use reader::memoization::rc_memo_reader_from;
+use std::fmt::Debug;
+use std::fmt::Error;
+use std::fmt::Formatter;
 use std::rc::Rc;
 use symbols::Tag;
 use traces::Policy;
 use traces::Trace;
 use trees::*;
-use std::fmt::Debug;
-use std::fmt::Formatter;
-use std::fmt::Error;
-use itertools::Itertools;
 
 type Case<Tk> = (Rc<dyn Reader<Tk>>, usize);
 

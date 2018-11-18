@@ -2,6 +2,19 @@ extern crate core;
 extern crate itertools;
 
 
+use json::parse_json;
+use list::*;
+use reader::*;
+use reader::conditional_token_reader::ConditionalTokenReader;
+use reader::list_reader::ListReader;
+use reader::loop_reader::LoopReader;
+use reader::token_reader::TokenReader;
+use std::fs;
+use std::rc::Rc;
+use std::time::Instant;
+use symbols::Symbol;
+use symbols::SymbolTable;
+
 mod list;
 mod reader;
 mod traces;
@@ -10,18 +23,6 @@ mod trees;
 mod lexer;
 mod parser;
 mod json;
-
-use symbols::SymbolTable;
-use symbols::Symbol;
-use std::rc::Rc;
-use reader::token_reader::TokenReader;
-use reader::*;
-use list::*;
-use reader::list_reader::ListReader;
-use reader::loop_reader::LoopReader;
-use reader::conditional_token_reader::ConditionalTokenReader;
-use std::fs;
-use json::parse_json;
 
 fn main() {
 //    let nil = Rc::new(List::Nil);
