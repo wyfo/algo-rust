@@ -161,10 +161,10 @@ fn json_grammar(table: &mut SymbolTable) -> (Rc<dyn Reader<u8>>, Rc<dyn Reader<&
         token_reader(FALSE.clone(), &token_ids),
         token_reader(NULL.clone(), &token_ids),
     ], Policy::Longest, tag(table, "value")), tokens.len()));
+
+    let lexer = rc_memo_reader(SwitchReader::new(tokens, Policy::Longest, None), 256);
     let json = value.clone();
-
-
-    (rc_memo_reader(SwitchReader::new(tokens, Policy::Longest, None), 256), json)
+    (lexer, json)
 }
 
 pub fn tokenize_to_vec(s: &String, lexer: Rc<dyn Reader<u8>>, table: &mut SymbolTable) -> Result<Vec<Rc<lexer::Token>>, lexer::NoToken> {
@@ -179,6 +179,7 @@ pub fn tokenize_to_vec(s: &String, lexer: Rc<dyn Reader<u8>>, table: &mut Symbol
 
 pub fn parse_json(s: &String, table: &mut SymbolTable) -> Option<(Vec<Rc<lexer::Token>>, Tree<Rc<lexer::Token>>)> {
     let (lxr, prsr) = json_grammar(table);
+//    return None;
     let start = Instant::now();
     println!("{:?}", &table);
     println!("LEXING STARTED");

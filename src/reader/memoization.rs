@@ -9,8 +9,8 @@ use trees::*;
 
 pub struct Memoized<Tk: Token, R: Reader<Tk>> {
     reader: R,
-    eps: RefCell<Option<ReadingResult<Tk>>>,
-    reads: Vec<RefCell<Option<ReadingResult<Tk>>>>,
+    eps: Option<ReadingResult<Tk>>,
+    reads: Vec<Option<ReadingResult<Tk>>>,
 }
 
 impl<Tk: Token, R: Reader<Tk>> Debug for Memoized<Tk, R> {
@@ -23,8 +23,8 @@ impl<Tk: Token, R: Reader<Tk> + 'static> Memoized<Tk, R> {
     fn new(reader: R, n: usize) -> Self {
         Memoized {
             reader,
-            eps: RefCell::new(None),
-            reads: vec![RefCell::new(None); n],
+            eps: None,
+            reads: vec![None; n],
         }
     }
 
@@ -57,22 +57,28 @@ impl<Tk: Token, R: Reader<Tk>> TreeBuilder for Memoized<Tk, R> {
 
 impl<Tk: Token + 'static, R: Reader<Tk> + 'static> Reader<Tk> for Memoized<Tk, R> {
     fn epsilon(&self, this: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
-        let mut eps = self.eps.borrow_mut();
-        if eps.is_some() {
-            return eps.as_ref().unwrap().clone();
+        let eps = unsafe { &mut *(&self.eps as *const _ as *mut Option<ReadingResult<Tk>>) };
+        match eps {
+            Some(ref memo) => memo.clone(),
+            None => {
+                let tmp = self.reader.epsilon(this);
+                *eps = Some(tmp.clone());
+                tmp
+            }
         }
-        *eps = Some(self.reader.epsilon(this));
-        eps.as_ref().unwrap().clone()
     }
 
     fn read(&self, this: &Rc<dyn Reader<Tk>>, token: Tk) -> ReadingResult<Tk> {
         let id = token.id();
-        let mut res = self.reads[id as usize].borrow_mut();
-        if res.is_some() {
-            return res.as_ref().unwrap().clone();
+        let mut res = unsafe { &mut *(&self.reads[id as usize] as *const _ as *mut Option<ReadingResult<Tk>>) };
+        match res {
+            Some(ref memo) => memo.clone(),
+            None => {
+                let tmp = self.reader.read(this, token);
+                *res = Some(tmp.clone());
+                tmp
+            }
         }
-        *res = Some(self.reader.read(this, token));
-        res.as_ref().unwrap().clone()
     }
 }
 
