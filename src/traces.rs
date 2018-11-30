@@ -1,6 +1,6 @@
-use std::rc::Rc;
 use list::List;
 use reader::*;
+use std::rc::Rc;
 
 #[derive(Copy, Clone, Debug)]
 pub enum Policy {
@@ -14,12 +14,6 @@ pub enum Trace {
     Rec(Rc<List<Trace>>),
     Tmp(Rc<StackedReader>),
 }
-
-//#[derive(Clone)]
-//pub struct StackedReader {
-//    pub parent: Option<Rc<StackedReader>>,
-//    pub prev_sucess: Option<Rc<List<Trace>>>,
-//}
 
 pub type StackedReader = List<Rc<List<Trace>>>;
 

@@ -186,7 +186,7 @@ pub fn parse_json(s: &String, table: &mut SymbolTable) -> Option<(Vec<Rc<lexer::
     let tokens = match tokenize_to_vec(s, lxr, table) {
         Ok(tks) => tks,
         Err(no_token) => {
-            println!("No token found ad {} - {}", no_token.start, no_token.stop);
+            println!("No token found at {} - {}", no_token.start, no_token.stop);
             return None;
         },
     };
