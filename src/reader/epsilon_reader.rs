@@ -1,17 +1,17 @@
 use reader::*;
-use std::rc::Rc;
-use trees::*;
-use traces::new_traces;
-use symbols::Tag;
 use std::fmt::Debug;
-use std::fmt::Formatter;
 use std::fmt::Error;
+use std::fmt::Formatter;
+use std::rc::Rc;
+use symbols::Tag;
+use traces::epsilon_trace;
+use trees::*;
 
 pub struct EpsilonReader;
 
 impl<Tk: Token> Reader<Tk> for EpsilonReader {
     fn epsilon(&self, _: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
-        ReadingResult {success: Some(new_traces()), ongoing: None }
+        ReadingResult { success: Some(epsilon_trace()), ongoing: None }
     }
 
     fn read(&self, _: &Rc<dyn Reader<Tk>>, _: Tk) -> ReadingResult<Tk> {
@@ -28,10 +28,6 @@ impl Debug for EpsilonReader {
 impl TreeBuilder for EpsilonReader {
     fn tag(&self) -> Tag {
         None
-    }
-
-    fn leaf_builder(&self) -> LeafBuilder {
-        LeafBuilder::Epsilon(None)
     }
 
     fn switch_builder(&self, _: usize) -> SwitchBuilder {

@@ -1,9 +1,9 @@
 use list::*;
 use reader::*;
 use std::rc::Rc;
+use symbols::Tag;
 use traces::Trace;
 use trees::*;
-use symbols::Tag;
 
 #[derive(Debug)]
 pub struct PolicyReader<Tk: Token> {
@@ -106,10 +106,6 @@ impl<Tk: Token> TreeBuilder for ListPolicyReader<Tk> {
         None
     }
 
-    fn leaf_builder(&self) -> LeafBuilder {
-        unimplemented!()
-    }
-
     fn switch_builder(&self, _: usize) -> SwitchBuilder {
         unimplemented!()
     }
@@ -122,10 +118,6 @@ impl<Tk: Token> TreeBuilder for ListPolicyReader<Tk> {
 impl<Tk: Token> TreeBuilder for LoopPolicyReader<Tk> {
     fn tag(&self) -> Tag {
         None
-    }
-
-    fn leaf_builder(&self) -> LeafBuilder {
-        unimplemented!()
     }
 
     fn switch_builder(&self, _: usize) -> SwitchBuilder {

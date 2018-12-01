@@ -1,14 +1,14 @@
 use list::*;
 use reader::*;
 use reader::policy_reader::*;
+use std::fmt::Debug;
+use std::fmt::Error;
+use std::fmt::Formatter;
 use std::iter::repeat;
 use std::rc::Rc;
 use symbols::Tag;
 use traces::*;
 use trees::*;
-use std::fmt::Debug;
-use std::fmt::Formatter;
-use std::fmt::Error;
 
 #[derive(Copy, Clone, Debug)]
 pub enum LoopOrdering {
@@ -78,7 +78,7 @@ impl<Tk: Token + 'static> LoopReader<Tk> {
 
 impl<Tk: Token + 'static> Reader<Tk> for LoopReader<Tk> {
     fn epsilon(&self, this: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
-        ReadingResult { success: Some(new_traces().push(Trace::Switch(0, self.policy))), ongoing: Some(self.replace(this, self.first_variant())) }
+        ReadingResult { success: Some(epsilon_trace().push(Trace::Switch(0, self.policy))), ongoing: Some(self.replace(this, self.first_variant())) }
     }
 
     fn read(&self, this: &Rc<dyn Reader<Tk>>, token: Tk) -> ReadingResult<Tk> {
@@ -97,10 +97,6 @@ impl<Tk: Token + 'static> Reader<Tk> for LoopReader<Tk> {
 impl<Tk: Token> TreeBuilder for LoopReader<Tk> {
     fn tag(&self) -> Tag {
         self.tag
-    }
-
-    fn leaf_builder(&self) -> LeafBuilder {
-        LeafBuilder::Epsilon(self.tag)
     }
 
     fn switch_builder(&self, _: usize) -> SwitchBuilder {

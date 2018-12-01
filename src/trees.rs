@@ -1,9 +1,11 @@
-use symbols::Tag;
-use std::rc::Rc;
-use traces::Trace;
 use list::*;
+use std::fmt::Debug;
 use std::iter::empty;
 use std::iter::once;
+use std::rc::Rc;
+use symbols::Tag;
+use traces::Trace;
+use trees::Tree::*;
 
 #[derive(Debug)]
 pub enum Tree<Tk> {
@@ -11,9 +13,6 @@ pub enum Tree<Tk> {
     Leaf(Tk, Tag),
     Node(Vec<Tree<Tk>>, Tag),
 }
-
-use trees::Tree::*;
-use std::fmt::Debug;
 
 impl<Tk: 'static> Tree<Tk> {
     pub fn tag(&self) -> Tag {
@@ -62,12 +61,6 @@ impl<Tk: 'static> Tree<Tk> {
 
 pub type VolatileBuilder<'a> = Option<(&'a dyn TreeBuilder, Tag)>;
 
-pub enum LeafBuilder {
-    Epsilon(Tag),
-    // LoopReader can be epsilon and have tag
-    Token(Tag),
-}
-
 pub enum SwitchBuilder<'a> {
     Case(&'a dyn TreeBuilder, Tag),
     Loop,
@@ -80,7 +73,6 @@ pub trait TreeBuilder: AsTreeBuilder {
     fn is_volatile(&self) -> VolatileBuilder {
         None
     }
-    fn leaf_builder(&self) -> LeafBuilder;
     fn switch_builder(&self, case: usize) -> SwitchBuilder;
     fn node_builder(&self) -> NodeBuilder; // impl Iterator doesn't compile
 }
@@ -125,14 +117,7 @@ fn build_rec<'a, 'b, 'c, Tk: Clone + Debug>(builder: &'a dyn TreeBuilder, traces
         return add_branch(next, traces, tag);
     }
     match traces {
-        List::Nil => match builder.leaf_builder() {
-            LeafBuilder::Epsilon(tag) => (if tag.is_some() {
-                Tree::Node(vec![Tree::Nil], tag)
-            } else {
-                Tree::Nil
-            }, tokens),
-            LeafBuilder::Token(tag) => (Leaf(tokens[0].clone(), tag), &tokens[1..])
-        },
+        List::Nil => unimplemented!(),
         List::Cons(trace, tail) => match trace {
             Trace::Switch(index, _) => match builder.switch_builder(*index) {
                 SwitchBuilder::Case(next, tag) => add_branch(next, tail, tag),
@@ -141,12 +126,14 @@ fn build_rec<'a, 'b, 'c, Tk: Clone + Debug>(builder: &'a dyn TreeBuilder, traces
             Trace::Rec(..) => {
                 let (elts, tag) = builder.node_builder();
                 build_node(elts.zip(traces.iter().map(as_rec_trace)), tokens, tag)
-            }
+            },
             Trace::Tmp(tmp) => {
                 let (elts, tag) = builder.node_builder();
                 let rev_traces: Vec<&List<Trace>> = tmp.iter().map(|t| t.as_ref()).collect();
                 build_node(elts.zip(rev_traces.iter().rev().map(|t| *t)), tokens, tag)
-            }
+            },
+            Trace::Token => (Leaf(tokens[0].clone(), builder.tag()), &tokens[1..]),
+            Trace::Epsilon => (Tree::Nil, tokens),
         },
     }
 }

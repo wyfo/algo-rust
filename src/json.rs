@@ -179,9 +179,8 @@ pub fn tokenize_to_vec(s: &String, lexer: Rc<dyn Reader<u8>>, table: &mut Symbol
 
 pub fn parse_json(s: &String, table: &mut SymbolTable) -> Option<(Vec<Rc<lexer::Token>>, Tree<Rc<lexer::Token>>)> {
     let (lxr, prsr) = json_grammar(table);
-//    return None;
-    let start = Instant::now();
     println!("{:?}", &table);
+    let lexing_start = Instant::now();
     println!("LEXING STARTED");
     let tokens = match tokenize_to_vec(s, lxr, table) {
         Ok(tks) => tks,
@@ -190,18 +189,21 @@ pub fn parse_json(s: &String, table: &mut SymbolTable) -> Option<(Vec<Rc<lexer::
             return None;
         },
     };
-    let start2 = Instant::now();
+    let parsing_start = Instant::now();
     println!("PARSING STARTED");
     let res = parser::parse(tokens.iter().map(|tk| unsafe {&*(tk.as_ref() as *const _)}), &prsr);
     let success = match res.success {
         Some(s) => s,
         None => return None,
     };
-    println!("PARSING DONE");
-    let time = Instant::now();
-    println!("lexing = {:?}", start2.duration_since(start));
-    println!("parsing = {:?}", time.duration_since(start2));
-    println!("time = {:?}", time.duration_since(start));
+    let tree_building_start = Instant::now();
+    println!("TREE BUILDING STARTED");
+    println!("DONE");
     let tree = tree_from_trace(prsr.as_tree_builder(), &success, &tokens);
+    let time = Instant::now();
+    println!("lexing = {:?}", parsing_start.duration_since(lexing_start));
+    println!("parsing = {:?}", tree_building_start.duration_since(parsing_start));
+    println!("parsing = {:?}", time.duration_since(tree_building_start));
+    println!("time = {:?}", time.duration_since(lexing_start));
     Some((tokens, tree))
 }

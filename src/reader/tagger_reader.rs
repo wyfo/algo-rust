@@ -1,8 +1,8 @@
 use reader::*;
 use std::rc::Rc;
-use trees::*;
 use symbols::Symbol;
 use symbols::Tag;
+use trees::*;
 
 #[derive(Debug)]
 pub struct TaggerReader<Tk: Token> {
@@ -27,10 +27,6 @@ impl<Tk: Token> TreeBuilder for TaggerReader<Tk> {
 
     fn is_volatile(&self) -> VolatileBuilder {
         Some((self, Some(self.sym)))
-    }
-
-    fn leaf_builder(&self) -> LeafBuilder {
-        unimplemented!()
     }
 
     fn switch_builder(&self, _: usize) -> SwitchBuilder {

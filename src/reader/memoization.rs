@@ -42,10 +42,6 @@ impl<Tk: Token, R: Reader<Tk>> TreeBuilder for Memoized<Tk, R> {
         self.reader.is_volatile()
     }
 
-    fn leaf_builder(&self) -> LeafBuilder {
-        self.reader.leaf_builder()
-    }
-
     fn switch_builder(&self, case: usize) -> SwitchBuilder {
         self.reader.switch_builder(case)
     }

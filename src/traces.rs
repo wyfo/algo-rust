@@ -1,4 +1,5 @@
 use list::List;
+use list::Stack;
 use reader::*;
 use std::rc::Rc;
 
@@ -13,6 +14,8 @@ pub enum Trace {
     Switch(TokenId, Policy),
     Rec(Rc<List<Trace>>),
     Tmp(Rc<StackedReader>),
+    Token,
+    Epsilon,
 }
 
 pub type StackedReader = List<Rc<List<Trace>>>;
@@ -35,6 +38,8 @@ pub trait AsStackedReader<Tk: Token> {
 }
 
 static mut _EMPTY_TRACES: Option<Rc<List<Trace>>> = Option::None;
+static mut _TOKEN: Option<Rc<List<Trace>>> = Option::None;
+static mut _EPSILON: Option<Rc<List<Trace>>> = Option::None;
 
 pub fn new_traces() -> Rc<List<Trace>> {
     unsafe {
@@ -42,6 +47,30 @@ pub fn new_traces() -> Rc<List<Trace>> {
             None => {
                 _EMPTY_TRACES = Option::Some(Rc::new(List::Nil::<Trace>));
                 _EMPTY_TRACES.as_ref().unwrap().clone()
+            },
+            Some(ref v) => v.clone(),
+        }
+    }
+}
+
+pub fn token_trace() -> Rc<List<Trace>> {
+    unsafe {
+        match _TOKEN {
+            None => {
+                _TOKEN = Option::Some(new_traces().push(Trace::Token));
+                _TOKEN.as_ref().unwrap().clone()
+            },
+            Some(ref v) => v.clone(),
+        }
+    }
+}
+
+pub fn epsilon_trace() -> Rc<List<Trace>> {
+    unsafe {
+        match _EPSILON {
+            None => {
+                _EPSILON = Option::Some(new_traces().push(Trace::Epsilon));
+                _EPSILON.as_ref().unwrap().clone()
             },
             Some(ref v) => v.clone(),
         }

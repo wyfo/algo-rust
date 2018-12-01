@@ -1,13 +1,13 @@
 use list::*;
 use reader::*;
 use reader::policy_reader::*;
+use std::fmt::Debug;
+use std::fmt::Error;
+use std::fmt::Formatter;
 use std::rc::Rc;
 use symbols::Tag;
 use traces::*;
 use trees::*;
-use std::fmt::Debug;
-use std::fmt::Formatter;
-use std::fmt::Error;
 
 pub struct ListReader<Tk: Token> {
     stacked: StackedReader,
@@ -96,10 +96,6 @@ impl<Tk: Token + 'static> Reader<Tk> for ListReader<Tk> {
 impl<Tk: Token + 'static> TreeBuilder for ListReader<Tk> {
     fn tag(&self) -> Tag {
         self.tag
-    }
-
-    fn leaf_builder(&self) -> LeafBuilder {
-        unimplemented!()
     }
 
     fn switch_builder(&self, _: usize) -> SwitchBuilder {

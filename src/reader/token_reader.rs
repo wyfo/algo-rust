@@ -25,7 +25,7 @@ impl<Tk: Token> Reader<Tk> for TokenReader {
 
     fn read(&self, _: &Rc<dyn Reader<Tk>>, token: Tk) -> ReadingResult<Tk> {
         ReadingResult {
-            success: if self.token_ref == token.id() { Some(new_traces()) } else { None },
+            success: if self.token_ref == token.id() { Some(token_trace()) } else { None },
             ongoing: None,
         }
     }
@@ -34,10 +34,6 @@ impl<Tk: Token> Reader<Tk> for TokenReader {
 impl TreeBuilder for TokenReader {
     fn tag(&self) -> Tag {
         self.tag
-    }
-
-    fn leaf_builder(&self) -> LeafBuilder {
-        LeafBuilder::Token(self.tag)
     }
 
     fn switch_builder(&self, _: usize) -> SwitchBuilder {

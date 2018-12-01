@@ -65,10 +65,6 @@ impl<Tk: Token> TreeBuilder for SwitchReader<Tk> {
         self.tag
     }
 
-    fn leaf_builder(&self) -> LeafBuilder {
-        unimplemented!()
-    }
-
     fn switch_builder(&self, case: usize) -> SwitchBuilder {
         SwitchBuilder::Case(self.cases[case].0.as_tree_builder(), self.tag)
     }

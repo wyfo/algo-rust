@@ -1,15 +1,16 @@
 use list::Stack;
 use reader::*;
+use reader::epsilon_reader::EpsilonReader;
+use std::fmt::Debug;
+use std::fmt::Error;
+use std::fmt::Formatter;
 use std::rc::Rc;
 use symbols::Tag;
+use traces::epsilon_trace;
+use traces::new_traces;
 use traces::Policy;
 use traces::Trace;
 use trees::*;
-use std::fmt::Debug;
-use std::fmt::Formatter;
-use std::fmt::Error;
-use reader::epsilon_reader::EpsilonReader;
-use traces::new_traces;
 
 pub struct OptionalReader<Tk: Token> {
     pub reader: Rc<dyn Reader<Tk>>,
@@ -31,17 +32,13 @@ impl<Tk: Token> OptionalReader<Tk> {
 impl<Tk: Token + 'static> Reader<Tk> for OptionalReader<Tk> {
     fn epsilon(&self, this: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
         ReadingResult {
-            success: Some(new_traces().push(Trace::Switch(0, Policy::Longest))),
-            ongoing: epsilon(&self.reader).ongoing.map(|o|rc_reader(OptionalReader::new(o))),
+            success: Some(epsilon_trace()),
+            ongoing: epsilon(&self.reader).ongoing,
         }
     }
 
     fn read(&self, _: &Rc<dyn Reader<Tk>>, token: Tk) -> ReadingResult<Tk> {
-        let ReadingResult { success, ongoing } = read(&self.reader, token);
-        ReadingResult {
-            success: success.map(|s| s.push(Trace::Switch(1, Policy::Longest))),
-            ongoing: ongoing.map(|o| rc_reader(OptionalReader::new(o))),
-        }
+        unimplemented!()
     }
 }
 
@@ -50,19 +47,15 @@ impl<Tk: Token> TreeBuilder for OptionalReader<Tk> {
         None
     }
 
-    fn leaf_builder(&self) -> LeafBuilder {
-        unimplemented!()
+    fn is_volatile(&self) -> VolatileBuilder {
+        Some((self.reader.as_tree_builder(), None))
     }
 
     fn switch_builder(&self, case: usize) -> SwitchBuilder {
-        if case == 0 {
-            SwitchBuilder::Case(&self.eps, None)
-        } else {
-            SwitchBuilder::Case(self.reader.as_tree_builder(), None)
-        }
+        self.reader.switch_builder(case)
     }
 
     fn node_builder(&self) -> NodeBuilder {
-        unimplemented!()
+        self.reader.node_builder()
     }
 }

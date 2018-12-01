@@ -1,11 +1,11 @@
 use reader::*;
+use std::fmt::Debug;
+use std::fmt::Error;
+use std::fmt::Formatter;
 use std::rc::Rc;
 use symbols::Tag;
-use trees::*;
 use traces::*;
-use std::fmt::Debug;
-use std::fmt::Formatter;
-use std::fmt::Error;
+use trees::*;
 
 pub struct ConditionalTokenReader<Tk: Token> {
     pub matching: Vec<ReadingResult<Tk>>,
@@ -20,7 +20,7 @@ impl<Tk: Token> Debug for ConditionalTokenReader<Tk> {
 
 impl<T: Token> ConditionalTokenReader<T> {
     pub fn success<Tk: Token>() -> ReadingResult<Tk> {
-        ReadingResult { success: Some(new_traces()), ongoing: None }
+        ReadingResult { success: Some(token_trace()), ongoing: None }
     }
     pub fn fail<Tk: Token>() -> ReadingResult<Tk> {
         ReadingResult::none()
@@ -50,10 +50,6 @@ impl<Tk: Token> Reader<Tk> for ConditionalTokenReader<Tk> {
 impl<Tk: Token> TreeBuilder for ConditionalTokenReader<Tk> {
     fn tag(&self) -> Tag {
         self.tag
-    }
-
-    fn leaf_builder(&self) -> LeafBuilder {
-        LeafBuilder::Token(self.tag)
     }
 
     fn switch_builder(&self, _: usize) -> SwitchBuilder {

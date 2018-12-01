@@ -48,10 +48,6 @@ impl<Tk: Token> TreeBuilder for RefReader<Tk> {
         Some((self.val.as_ref().unwrap().as_tree_builder(), None))
     }
 
-    fn leaf_builder(&self) -> LeafBuilder {
-        unimplemented!()
-    }
-
     fn switch_builder(&self, _: usize) -> SwitchBuilder {
         unimplemented!()
     }
