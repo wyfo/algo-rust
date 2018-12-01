@@ -2,6 +2,7 @@ use list::List;
 use std::fmt::Debug;
 use std::rc::Rc;
 use traces::Trace;
+use traces::TraceEnding;
 use trees::*;
 
 pub mod epsilon_reader;
@@ -45,7 +46,7 @@ impl Token for TokenId {
 
 #[derive(Debug, Clone)]
 pub struct ReadingResult<Tk: Token> {
-    pub success: Option<Rc<List<Trace>>>,
+    pub success: Option<Rc<List<Trace, TraceEnding>>>,
     pub ongoing: Option<Rc<dyn Reader<Tk>>>,
 }
 

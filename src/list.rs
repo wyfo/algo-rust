@@ -1,40 +1,40 @@
+use std::fmt::Debug;
+use std::fmt::Error;
+use std::fmt::Formatter;
 use std::ops::Index;
 use std::rc::Rc;
-use std::fmt::Debug;
-use std::fmt::Formatter;
-use std::fmt::Error;
 
 #[derive(Clone)]
-pub enum List<T> {
-    Cons(T, Rc<List<T>>),
-    Nil,
+pub enum List<T, N> {
+    Cons(T, Rc<List<T, N>>),
+    Nil(N),
 }
 
-impl<T: Debug + Clone> Debug for List<T> {
+impl<T: Debug + Clone, N> Debug for List<T, N> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "{:?}", self.iter().collect::<Vec<_>>())
     }
 }
 
-impl<T: Clone> Index<usize> for List<T> {
+impl<T: Clone, N> Index<usize> for List<T, N> {
     type Output = T;
     fn index(&self, index: usize) -> &Self::Output {
         match self {
-            List::Nil => panic!("empty list"),
+            List::Nil(..) => panic!("empty list"),
             List::Cons(ref elt, _) if index == 0 => &elt,
             List::Cons(_, list) => &list[index - 1],
         }
     }
 }
 
-pub struct ListIterator<'a, T: 'a>(&'a List<T>);
+pub struct ListIterator<'a, T: 'a, N: 'a>(&'a List<T, N>);
 
-impl<'a, T: Clone> Iterator for ListIterator<'a, T> {
+impl<'a, T: Clone, N> Iterator for ListIterator<'a, T, N> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<&'a T> {
         match self.0 {
-            List::Nil => None,
+            List::Nil(..) => None,
             List::Cons(elt, next) => {
                 self.0 = next;
                 Some(elt)
@@ -43,17 +43,17 @@ impl<'a, T: Clone> Iterator for ListIterator<'a, T> {
     }
 }
 
-impl<T: Clone> List<T> {
-    pub fn iter(&self) -> ListIterator<T> {
+impl<T: Clone, N> List<T, N> {
+    pub fn iter(&self) -> ListIterator<T, N> {
         ListIterator(self)
     }
 }
 
-impl<'a, T: Clone> IntoIterator for &'a List<T> {
+impl<'a, T: Clone, N> IntoIterator for &'a List<T, N> {
     type Item = &'a T;
-    type IntoIter = ListIterator<'a, T>;
+    type IntoIter = ListIterator<'a, T, N>;
 
-    fn into_iter(self) -> ListIterator<'a, T> {
+    fn into_iter(self) -> ListIterator<'a, T, N> {
         self.iter()
     }
 }
@@ -64,19 +64,19 @@ pub trait Stack<T: Clone>: Sized {
     fn peek(&self) -> &T;
 }
 
-impl<T: Clone> Stack<T> for Rc<List<T>> {
-    fn push(&self, elt: T) -> Rc<List<T>> {
+impl<T: Clone, N> Stack<T> for Rc<List<T, N>> {
+    fn push(&self, elt: T) -> Rc<List<T, N>> {
         Rc::new(List::Cons(elt.clone(), self.clone()))
     }
-    fn pop(&self) -> (Rc<List<T>>, T) {
+    fn pop(&self) -> (Rc<List<T, N>>, T) {
         match **self {
-            List::Nil => panic!("empty list"),
+            List::Nil(..) => panic!("empty list"),
             List::Cons(ref elt, ref list) => (list.clone(), elt.clone()),
         }
     }
     fn peek(&self) -> &T {
         match **self {
-            List::Nil => panic!("empty list"),
+            List::Nil(..) => panic!("empty list"),
             List::Cons(ref elt, _) => elt,
         }
     }

@@ -5,6 +5,7 @@ use std::iter::once;
 use std::rc::Rc;
 use symbols::Tag;
 use traces::Trace;
+use traces::TraceEnding;
 use trees::Tree::*;
 
 #[derive(Debug)]
@@ -87,7 +88,7 @@ impl<T: TreeBuilder> AsTreeBuilder for T {
     }
 }
 
-fn build_node<'a, 'b, Tk: Clone + Debug>(elts_with_traces: impl Iterator<Item=(&'a dyn TreeBuilder, &'a List<Trace>)>, tokens: &'b [Tk], tag: Tag) -> (Tree<Tk>, &'b [Tk]) {
+fn build_node<'a, 'b, Tk: Clone + Debug>(elts_with_traces: impl Iterator<Item=(&'a dyn TreeBuilder, &'a List<Trace, TraceEnding>)>, tokens: &'b [Tk], tag: Tag) -> (Tree<Tk>, &'b [Tk]) {
     let (children, tokens) = elts_with_traces.fold((Vec::<Tree<Tk>>::new(), tokens),
                                                    |(mut children, tokens), (builder, traces)| {
                                                        let (tree, tokens) = build_rec(builder, traces, tokens);
@@ -97,7 +98,7 @@ fn build_node<'a, 'b, Tk: Clone + Debug>(elts_with_traces: impl Iterator<Item=(&
     (Node(children, tag), tokens)
 }
 
-fn as_rec_trace(trace: &Trace) -> &List<Trace> {
+fn as_rec_trace(trace: &Trace) -> &List<Trace, TraceEnding> {
     if let Trace::Rec(traces) = trace {
         traces.as_ref()
     } else {
@@ -105,8 +106,8 @@ fn as_rec_trace(trace: &Trace) -> &List<Trace> {
     }
 }
 
-fn build_rec<'a, 'b, 'c, Tk: Clone + Debug>(builder: &'a dyn TreeBuilder, traces: &'b List<Trace>, tokens: &'c [Tk]) -> (Tree<Tk>, &'c [Tk]) {
-    let add_branch = |next: &dyn TreeBuilder, traces: &List<Trace>, tag: Tag| if tag.is_some() {
+fn build_rec<'a, 'b, 'c, Tk: Clone + Debug>(builder: &'a dyn TreeBuilder, traces: &'b List<Trace, TraceEnding>, tokens: &'c [Tk]) -> (Tree<Tk>, &'c [Tk]) {
+    let add_branch = |next: &dyn TreeBuilder, traces: &List<Trace, TraceEnding>, tag: Tag| if tag.is_some() {
         let (tree, tokens) = build_rec(next, traces, tokens);
         (Tree::Node(vec![tree], tag), tokens)
     } else {
@@ -117,7 +118,11 @@ fn build_rec<'a, 'b, 'c, Tk: Clone + Debug>(builder: &'a dyn TreeBuilder, traces
         return add_branch(next, traces, tag);
     }
     match traces {
-        List::Nil => unimplemented!(),
+        List::Nil(ending) => match ending {
+            TraceEnding::Token => (Leaf(tokens[0].clone(), builder.tag()), &tokens[1..]),
+            TraceEnding::Epsilon => (Tree::Nil, tokens),
+            _ => unimplemented!(),
+        },
         List::Cons(trace, tail) => match trace {
             Trace::Switch(index, _) => match builder.switch_builder(*index) {
                 SwitchBuilder::Case(next, tag) => add_branch(next, tail, tag),
@@ -129,15 +134,13 @@ fn build_rec<'a, 'b, 'c, Tk: Clone + Debug>(builder: &'a dyn TreeBuilder, traces
             },
             Trace::Tmp(tmp) => {
                 let (elts, tag) = builder.node_builder();
-                let rev_traces: Vec<&List<Trace>> = tmp.iter().map(|t| t.as_ref()).collect();
+                let rev_traces: Vec<&List<Trace, TraceEnding>> = tmp.iter().map(|t| t.as_ref()).collect();
                 build_node(elts.zip(rev_traces.iter().rev().map(|t| *t)), tokens, tag)
             },
-            Trace::Token => (Leaf(tokens[0].clone(), builder.tag()), &tokens[1..]),
-            Trace::Epsilon => (Tree::Nil, tokens),
         },
     }
 }
 
-pub fn tree_from_trace<Tk: Clone + Debug>(builder: &dyn TreeBuilder, traces: &Rc<List<Trace>>, tokens: &[Tk]) -> Tree<Tk> {
+pub fn tree_from_trace<Tk: Clone + Debug>(builder: &dyn TreeBuilder, traces: &Rc<List<Trace, TraceEnding>>, tokens: &[Tk]) -> Tree<Tk> {
     build_rec(builder, &traces, tokens).0
 }

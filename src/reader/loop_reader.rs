@@ -51,7 +51,7 @@ impl<Tk: Token + 'static> LoopReader<Tk> {
         epsilon(&self.ref_).ongoing.unwrap()
     }
 
-    fn shift(&self, this: &Rc<dyn Reader<Tk>>, traces: Rc<List<Trace>>) -> Rc<dyn Reader<Tk>> {
+    fn shift(&self, this: &Rc<dyn Reader<Tk>>, traces: Rc<List<Trace, TraceEnding>>) -> Rc<dyn Reader<Tk>> {
         rc_reader(LoopReader {
             stacked: StackedReader::new(Self::as_stacked_reader(this), traces.clone()),
             ref_: self.ref_.clone(),
@@ -88,7 +88,7 @@ impl<Tk: Token + 'static> Reader<Tk> for LoopReader<Tk> {
         let ongoing = ongoing.map(|o| self.replace(this, o));
         let ongoing = LoopPolicyReader::of(success.clone(), ongoing, success_trace, self.cursor + 1);
         ReadingResult {
-            success: success.map(|success| new_traces().push(Trace::Tmp(Self::as_stacked_reader(&(success as Rc<dyn Reader<Tk>>)))).push(Trace::Switch(self.cursor * (self.ordering as usize), self.policy))),
+            success: success.map(|success| stacked_trace().push(Trace::Tmp(Self::as_stacked_reader(&(success as Rc<dyn Reader<Tk>>)))).push(Trace::Switch(self.cursor * (self.ordering as usize), self.policy))),
             ongoing,
         }
     }

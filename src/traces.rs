@@ -9,22 +9,27 @@ pub enum Policy {
     Longest,
 }
 
+#[derive(Copy, Clone, Debug)]
+pub enum TraceEnding {
+    Token,
+    Epsilon,
+    Stacked,
+}
+
 #[derive(Clone, Debug)]
 pub enum Trace {
     Switch(TokenId, Policy),
-    Rec(Rc<List<Trace>>),
+    Rec(Rc<List<Trace, TraceEnding>>),
     Tmp(Rc<StackedReader>),
-    Token,
-    Epsilon,
 }
 
-pub type StackedReader = List<Rc<List<Trace>>>;
+pub type StackedReader = List<Rc<List<Trace, TraceEnding>>, ()>;
 
 impl StackedReader {
     pub fn without_parent() -> Self {
-        List::Nil
+        List::Nil(())
     }
-    pub fn new(parent: Rc<StackedReader>, prev_success: Rc<List<Trace>>) -> Self {
+    pub fn new(parent: Rc<StackedReader>, prev_success: Rc<List<Trace, TraceEnding>>) -> Self {
         List::Cons(prev_success, parent)
     }
 }
@@ -37,41 +42,41 @@ pub trait AsStackedReader<Tk: Token> {
     }
 }
 
-static mut _EMPTY_TRACES: Option<Rc<List<Trace>>> = Option::None;
-static mut _TOKEN: Option<Rc<List<Trace>>> = Option::None;
-static mut _EPSILON: Option<Rc<List<Trace>>> = Option::None;
+static mut _TOKEN: Option<Rc<List<Trace, TraceEnding>>> = Option::None;
+static mut _EPSILON: Option<Rc<List<Trace, TraceEnding>>> = Option::None;
+static mut _STACKED: Option<Rc<List<Trace, TraceEnding>>> = Option::None;
 
-pub fn new_traces() -> Rc<List<Trace>> {
-    unsafe {
-        match _EMPTY_TRACES {
-            None => {
-                _EMPTY_TRACES = Option::Some(Rc::new(List::Nil::<Trace>));
-                _EMPTY_TRACES.as_ref().unwrap().clone()
-            },
-            Some(ref v) => v.clone(),
-        }
-    }
-}
-
-pub fn token_trace() -> Rc<List<Trace>> {
+pub fn token_trace() -> Rc<List<Trace, TraceEnding>> {
     unsafe {
         match _TOKEN {
             None => {
-                _TOKEN = Option::Some(new_traces().push(Trace::Token));
+                _TOKEN = Option::Some(Rc::new(List::Nil(TraceEnding::Token)));
                 _TOKEN.as_ref().unwrap().clone()
-            },
+            }
             Some(ref v) => v.clone(),
         }
     }
 }
 
-pub fn epsilon_trace() -> Rc<List<Trace>> {
+pub fn epsilon_trace() -> Rc<List<Trace, TraceEnding>> {
     unsafe {
         match _EPSILON {
             None => {
-                _EPSILON = Option::Some(new_traces().push(Trace::Epsilon));
+                _EPSILON = Option::Some(Rc::new(List::Nil(TraceEnding::Epsilon)));
                 _EPSILON.as_ref().unwrap().clone()
-            },
+            }
+            Some(ref v) => v.clone(),
+        }
+    }
+}
+
+pub fn stacked_trace() -> Rc<List<Trace, TraceEnding>> {
+    unsafe {
+        match _STACKED {
+            None => {
+                _STACKED = Option::Some(Rc::new(List::Nil(TraceEnding::Stacked)));
+                _STACKED.as_ref().unwrap().clone()
+            }
             Some(ref v) => v.clone(),
         }
     }

@@ -1,13 +1,14 @@
-use reader;
-use reader::Reader;
-use std::rc::Rc;
 use list::List;
-use traces::Trace;
+use reader;
 use reader::epsilon;
 use reader::read;
+use reader::Reader;
+use std::rc::Rc;
+use traces::Trace;
+use traces::TraceEnding;
 
 pub struct ParsingResult {
-    pub success: Option<Rc<List<Trace>>>,
+    pub success: Option<Rc<List<Trace, TraceEnding>>>,
     pub success_len: usize,
     pub nb_tokens_read: usize,
 }

@@ -3,13 +3,14 @@ use reader::*;
 use std::rc::Rc;
 use symbols::Tag;
 use traces::Trace;
+use traces::TraceEnding;
 use trees::*;
 
 #[derive(Debug)]
 pub struct PolicyReader<Tk: Token> {
     succeeded: Rc<dyn Reader<Tk>>,
     still_ongoing: Rc<dyn Reader<Tk>>,
-    success_trace: Rc<List<Trace>>,
+    success_trace: Rc<List<Trace, TraceEnding>>,
     trace_index: usize,
 }
 
@@ -17,7 +18,7 @@ pub trait Decide<Tk: Token> where Self: 'static + Sized + Reader<Tk> {
     fn new(policy_reader: PolicyReader<Tk>) -> Self;
 
     fn of(succeeded: Option<Rc<dyn Reader<Tk>>>, still_ongoing: Option<Rc<dyn Reader<Tk>>>,
-          success_trace: Option<Rc<List<Trace>>>, trace_index: usize) -> Option<Rc<dyn Reader<Tk>>> {
+          success_trace: Option<Rc<List<Trace, TraceEnding>>>, trace_index: usize) -> Option<Rc<dyn Reader<Tk>>> {
         if succeeded.is_some() && still_ongoing.is_some() {
             Some(rc_reader(Self::new(PolicyReader {
                 succeeded: succeeded.unwrap(),
@@ -31,7 +32,7 @@ pub trait Decide<Tk: Token> where Self: 'static + Sized + Reader<Tk> {
     }
     fn policy_reader(&self) -> &PolicyReader<Tk>;
 
-    fn between(ongoing_success: Rc<List<Trace>>, succeeded_success: Rc<List<Trace>>) -> Rc<List<Trace>>;
+    fn between(ongoing_success: Rc<List<Trace, TraceEnding>>, succeeded_success: Rc<List<Trace, TraceEnding>>) -> Rc<List<Trace, TraceEnding>>;
 
     fn read_and_decide(&self, token: Tk) -> ReadingResult<Tk> {
         let policy_reader = self.policy_reader();
@@ -60,7 +61,7 @@ impl<Tk: 'static + Token> Decide<Tk> for ListPolicyReader<Tk> {
         &self.0
     }
 
-    fn between(_: Rc<List<Trace>>, _: Rc<List<Trace>>) -> Rc<List<Trace>> {
+    fn between(_: Rc<List<Trace, TraceEnding>>, _: Rc<List<Trace, TraceEnding>>) -> Rc<List<Trace, TraceEnding>> {
         unimplemented!()
     }
 }
@@ -76,7 +77,7 @@ impl<Tk: 'static + Token> Decide<Tk> for LoopPolicyReader<Tk> {
         &self.0
     }
 
-    fn between(_: Rc<List<Trace>>, _: Rc<List<Trace>>) -> Rc<List<Trace>> {
+    fn between(_: Rc<List<Trace, TraceEnding>>, _: Rc<List<Trace, TraceEnding>>) -> Rc<List<Trace, TraceEnding>> {
         unimplemented!()
     }
 }

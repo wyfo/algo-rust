@@ -203,7 +203,7 @@ pub fn parse_json(s: &String, table: &mut SymbolTable) -> Option<(Vec<Rc<lexer::
     let time = Instant::now();
     println!("lexing = {:?}", parsing_start.duration_since(lexing_start));
     println!("parsing = {:?}", tree_building_start.duration_since(parsing_start));
-    println!("parsing = {:?}", time.duration_since(tree_building_start));
+    println!("tree building = {:?}", time.duration_since(tree_building_start));
     println!("time = {:?}", time.duration_since(lexing_start));
     Some((tokens, tree))
 }

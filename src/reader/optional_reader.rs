@@ -7,7 +7,6 @@ use std::fmt::Formatter;
 use std::rc::Rc;
 use symbols::Tag;
 use traces::epsilon_trace;
-use traces::new_traces;
 use traces::Policy;
 use traces::Trace;
 use trees::*;

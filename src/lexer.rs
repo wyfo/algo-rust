@@ -3,18 +3,19 @@ use list::Stack;
 use parser::parse;
 use reader;
 use reader::Reader;
+use std::fmt::Debug;
+use std::fmt::Error;
+use std::fmt::Formatter;
 use std::rc::Rc;
 use symbols::Symbol;
 use traces::Trace;
+use traces::TraceEnding;
 use trees::SwitchBuilder;
-use std::fmt::Debug;
-use std::fmt::Formatter;
-use std::fmt::Error;
 
 #[derive(Clone)]
 pub struct Token {
     pub name: Symbol,
-    pub traces: Rc<List<Trace>>,
+    pub traces: Rc<List<Trace, TraceEnding>>,
     pub start: usize,
     pub stop: usize,
     id: reader::TokenId,

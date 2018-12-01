@@ -37,7 +37,7 @@ impl<Tk: Token + 'static> ListReader<Tk> {
         }
     }
 
-    fn shift(&self, this: &Rc<dyn Reader<Tk>>, traces: Rc<List<Trace>>) -> Rc<dyn Reader<Tk>> {
+    fn shift(&self, this: &Rc<dyn Reader<Tk>>, traces: Rc<List<Trace, TraceEnding>>) -> Rc<dyn Reader<Tk>> {
         let cursor = self.cursor + 1;
         let cur_elt = if cursor == self.elts.len() {
             None
@@ -71,7 +71,7 @@ impl<Tk: Token + 'static> ListReader<Tk> {
         let ongoing = ongoing.map(|o| self.replace(this, o));
         if let Some(success) = success {
             if self.cursor + 1 == self.elts.len() {
-                ReadingResult { success: Some(new_traces().push(Trace::Tmp(Self::as_stacked_reader(&(success as Rc<dyn Reader<Tk>>))))), ongoing }
+                ReadingResult { success: Some(stacked_trace().push(Trace::Tmp(Self::as_stacked_reader(&(success as Rc<dyn Reader<Tk>>))))), ongoing }
             } else {
                 let ReadingResult { success: forward_success, ongoing: forward_ongoing } = epsilon(&success);
                 let forward_ongoing = ListPolicyReader::of(forward_ongoing, ongoing, success_trace, self.cursor);
