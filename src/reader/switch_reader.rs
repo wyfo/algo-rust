@@ -10,27 +10,36 @@ use symbols::Tag;
 use traces::Policy;
 use traces::Trace;
 use trees::*;
+use reader::memoization::MemoAllocator;
+use reader::memoization::WithoutMemo;
+use reader::memoization::WithMemo;
+use std::marker::PhantomData;
 
 type Case<Tk> = (Rc<dyn Reader<Tk>>, usize);
 
-pub struct SwitchReader<Tk: Token> {
+pub struct SwitchReader_<Tk: Token, A: MemoAllocator> {
     pub cases: Vec<Case<Tk>>,
     policy: Policy,
     pub tag: Tag,
+    phantom: PhantomData<A>
 }
 
-impl<Tk: Token> Debug for SwitchReader<Tk> {
+pub type SwitchReader<Tk> = SwitchReader_<Tk, WithoutMemo>;
+pub type MemoSwitchReader<Tk> = SwitchReader_<Tk, WithMemo>;
+
+impl<Tk: Token, A: MemoAllocator> Debug for SwitchReader_<Tk, A> {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         write!(f, "({})", self.cases.iter().map(|c| format!("{:?}", c.0)).join(" | "))
     }
 }
 
-impl<Tk: Token + 'static> SwitchReader<Tk> {
+impl<Tk: Token + 'static, A: 'static + MemoAllocator> SwitchReader_<Tk, A> {
     pub fn new(cases: Vec<Rc<dyn Reader<Tk>>>, policy: Policy, tag: Tag) -> Self {
-        SwitchReader {
+        SwitchReader_ {
             cases: cases.iter().enumerate().map(|t| (t.1.clone(), t.0 as usize)).collect(),
             policy,
             tag,
+            phantom: PhantomData
         }
     }
 
@@ -40,7 +49,7 @@ impl<Tk: Token + 'static> SwitchReader<Tk> {
         let ongoing: Option<Rc<dyn Reader<Tk>>> = if ongoings.is_empty() {
             None
         } else {
-            Some(rc_memo_reader_from(SwitchReader::<Tk> { cases: ongoings, policy: self.policy, tag: self.tag }, self))
+            Some(A::rc(SwitchReader_::<Tk, A> { cases: ongoings, policy: self.policy, tag: self.tag, phantom: PhantomData }, self))
         };
         let success = results.iter().find(|(c, _)| c.success.is_some()).map(|(c, i)| (c.success.clone().unwrap(), i));
         ReadingResult {
@@ -50,7 +59,7 @@ impl<Tk: Token + 'static> SwitchReader<Tk> {
     }
 }
 
-impl<Tk: Token + 'static> Reader<Tk> for SwitchReader<Tk> {
+impl<Tk: Token + 'static, A: MemoAllocator + 'static> Reader<Tk> for SwitchReader_<Tk, A> {
     fn epsilon(&self, _: &Rc<dyn Reader<Tk>>) -> ReadingResult<Tk> {
         self.process(epsilon)
     }
@@ -60,7 +69,7 @@ impl<Tk: Token + 'static> Reader<Tk> for SwitchReader<Tk> {
     }
 }
 
-impl<Tk: Token> TreeBuilder for SwitchReader<Tk> {
+impl<Tk: Token, A: MemoAllocator> TreeBuilder for SwitchReader_<Tk, A> {
     fn tag(&self) -> Tag {
         self.tag
     }

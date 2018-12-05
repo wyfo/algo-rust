@@ -85,3 +85,22 @@ pub fn rc_memo_reader<Tk: Token + 'static, R: Reader<Tk> + 'static>(reader: R, n
 pub(super) fn rc_memo_reader_from<Tk: Token + 'static, R: Reader<Tk> + 'static>(reader: R, from: &R) -> Rc<dyn Reader<Tk>> {
     Rc::new(Memoized::new(reader, Memoized::as_memoized(from).reads.len()))
 }
+
+pub trait MemoAllocator {
+    fn rc<Tk: 'static + Token, R: 'static + Reader<Tk>>(reader: R, from: &R) -> Rc<dyn Reader<Tk>>;
+}
+
+pub struct WithMemo;
+pub struct WithoutMemo;
+
+impl MemoAllocator for WithMemo {
+    fn rc<Tk: 'static + Token, R: 'static + Reader<Tk>>(reader: R, from: &R) -> Rc<dyn Reader<Tk>> {
+        rc_memo_reader_from(reader, from)
+    }
+}
+
+impl MemoAllocator for WithoutMemo {
+    fn rc<Tk: 'static + Token, R: 'static + Reader<Tk>>(reader: R, _: &R) -> Rc<dyn Reader<Tk>> {
+        rc_reader(reader)
+    }
+}
