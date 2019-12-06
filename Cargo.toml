@@ -1,0 +1,11 @@
+[package]
+name = "oltra-rs"
+version = "0.1.0"
+authors = ["Joseph Perez <joseph@perez.wf>"]
+
+[dependencies]
+itertools = "0.7.8"
+serde_json = "1.0.33"
+
+[profile.dev]
+opt-level = 3
